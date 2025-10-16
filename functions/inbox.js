@@ -1,32 +1,48 @@
-import { getStore } from "@netlify/blobs";
+import fs from "fs";
+import path from "path";
+
+const file = "/tmp/docs.json"; // tmp-Speicher pro Deploy
 
 export async function handler(event) {
-  const store = getStore("docs");
-
   if (event.httpMethod === "POST") {
     const data = JSON.parse(event.body || "{}");
-    const id = (globalThis.crypto?.randomUUID?.() || String(Date.now()));
+    const id = Date.now().toString();
     const item = {
       id,
-      titel: data.title || data.titel || "Ohne Titel",
-      stadt: data.city || data.stadt || "",
-      datum: data.date || data.datum || new Date().toISOString().slice(0, 10),
+      titel: data.title || "Ohne Titel",
+      stadt: data.city || "",
+      datum: data.date || new Date().toISOString().slice(0, 10),
       url: data.url || ""
     };
-    await store.setJSON(`doc-${id}.json`, item);
-    return json(200, { ok: true, item });
+
+    const list = readList();
+    list.push(item);
+    fs.writeFileSync(file, JSON.stringify(list));
+    return json({ ok: true, item });
   }
 
   if (event.httpMethod === "GET") {
-    const list = await store.list();
-    const items = await Promise.all(list.blobs.map(b => store.get(b.key, { type: "json" })));
-    items.sort((a, b) => (b.datum || "").localeCompare(a.datum || ""));
-    return json(200, { ok: true, items });
+    const list = readList();
+    return json({ ok: true, items: list });
   }
 
-  return json(405, { ok: false, error: "Method not allowed" });
+  return { statusCode: 405, body: "Method not allowed" };
 }
 
-function json(code, obj) {
-  return { statusCode: code, headers: { "content-type": "application/json" }, body: JSON.stringify(obj) };
+function readList() {
+  try {
+    if (!fs.existsSync(file)) return [];
+    const raw = fs.readFileSync(file, "utf8");
+    return JSON.parse(raw || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function json(obj) {
+  return {
+    statusCode: 200,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(obj)
+  };
 }
