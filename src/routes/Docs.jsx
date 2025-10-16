@@ -1,12 +1,15 @@
-import { useState } from "react";
-
-const mock = [
-  { id: 1, titel: "Beispiel PDF", stadt: "Bonn", datum: "2025-10-16", url: "" }
-];
+import { useEffect, useState } from "react";
 
 export default function Docs() {
-  const [items] = useState(mock);
+  const [items, setItems] = useState([]);
   const [active, setActive] = useState(null);
+
+  useEffect(() => {
+    fetch("/.netlify/functions/inbox")
+      .then(r => r.json())
+      .then(d => setItems(d.items || []))
+      .catch(() => setItems([]));
+  }, []);
 
   return (
     <div className="h-screen grid grid-cols-1 md:grid-cols-3">
@@ -22,6 +25,7 @@ export default function Docs() {
               </button>
             </li>
           ))}
+          {items.length === 0 && <li className="text-sm text-gray-500">Noch keine Dokumente.</li>}
         </ul>
       </aside>
       <main className="md:col-span-2 p-4">
@@ -36,3 +40,4 @@ export default function Docs() {
     </div>
   );
 }
+
