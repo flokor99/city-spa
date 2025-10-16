@@ -3,7 +3,7 @@ export async function handler(event) {
   const message = body.message || "";
 
   // Beispiel: an deinen Make-Webhook weiterleiten
-  const makeUrl = "https://hook.eu2.make.com/DEIN_WEBHOOK";
+  const makeUrl = "https://hook.eu2.make.com/55nfe6owtq9pw9ib93ucbzb2tmdh0rwx";
 
   const res = await fetch(makeUrl, {
     method: "POST",
