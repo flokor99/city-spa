@@ -1,9 +1,7 @@
 export async function handler(event) {
   const body = JSON.parse(event.body || "{}");
-  const message = body.message || "";
-
-  // Beispiel: an deinen Make-Webhook weiterleiten
-  const makeUrl = "https://hook.eu2.make.com/55nfe6owtq9pw9ib93ucbzb2tmdh0rwx";
+  const makeUrl = process.env.MAKE_WEBHOOK_URL;
+  if (!makeUrl) return json(500, { ok: false, error: "MAKE_WEBHOOK_URL missing" });
 
   const res = await fetch(makeUrl, {
     method: "POST",
@@ -11,11 +9,13 @@ export async function handler(event) {
     body: JSON.stringify(body)
   });
 
-  const reply = await res.json().catch(() => ({}));
+  const text = await res.text();
+  let reply = text;
+  try { reply = JSON.parse(text); } catch {}
 
-  return {
-    statusCode: 200,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ ok: true, reply })
-  };
+  return json(200, { ok: true, reply });
+}
+
+function json(code, obj) {
+  return { statusCode: code, headers: { "content-type": "application/json" }, body: JSON.stringify(obj) };
 }
