@@ -1,14 +1,30 @@
 import { useState } from "react";
 
 export default function Chat() {
-  const [messages, setMessages] = useState([{ role: "system", text: "Noch ohne Backend." }]);
+  const [messages, setMessages] = useState([{ role: "system", text: "Verbunden über /functions/chat" }]);
   const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const send = (e) => {
+  const send = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
-    setMessages(m => [...m, { role: "user", text: input }]);
+    const text = input.trim();
+    if (!text || busy) return;
+    setMessages(m => [...m, { role: "user", text }]);
     setInput("");
+    setBusy(true);
+    try {
+      const r = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+      const d = await r.json();
+      const replyText =
+        d?.reply?.message || d?.reply?.text || d?.reply?.answer || JSON.stringify(d.reply ?? d);
+      setMessages(m => [...m, { role: "assistant", text: replyText }]);
+    } catch (err) {
+      setMessages(m => [...m, { role: "assistant", text: "Fehler beim Chat-Aufruf." }]);
+    } finally { setBusy(false); }
   };
 
   return (
@@ -23,8 +39,9 @@ export default function Chat() {
       </div>
       <form onSubmit={send} className="p-3 border-t bg-white flex gap-2">
         <input value={input} onChange={e=>setInput(e.target.value)} placeholder="Nachricht…" className="flex-1 border rounded-xl px-3 py-2" />
-        <button className="border rounded-xl px-4 py-2">Senden</button>
+        <button className="border rounded-xl px-4 py-2" disabled={busy}>{busy ? "…" : "Senden"}</button>
       </form>
     </div>
   );
 }
+
