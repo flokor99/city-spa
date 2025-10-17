@@ -15,7 +15,13 @@ export default function Docs() {
     <div className="h-screen grid grid-cols-1 md:grid-cols-3">
       <aside className="border-r bg-white p-4">
         <a href="/" className="text-sm block mb-4">← Zurück</a>
-        <h2 className="font-semibold mb-3">Dokumente</h2>
+        <button
+  onClick={() => setActive({ url: "/Szenario2_Vorlage.pdf" })}
+  className="underline text-blue-600 mb-3 block text-left"
+>
+  Szenario 2 – Vorlage (anzeigen)
+</button>
+<h2 className="font-semibold mb-3">Dokumente</h2>
 
 <a
   href="/Szenario2_Vorlage.pdf"
@@ -25,6 +31,12 @@ export default function Docs() {
 >
   Szenario 2 – Vorlage (PDF öffnen)
 </a>
+<button
+  onClick={() => setActive({ url: "/Szenario2_Vorlage.pdf" })}
+  className="underline text-blue-600 mb-3 block text-left"
+>
+  Szenario 2 – Vorlage (anzeigen)
+</button>
 
         <ul className="space-y-2">
           {items.map(it => (
