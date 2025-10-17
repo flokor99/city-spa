@@ -16,6 +16,16 @@ export default function Docs() {
       <aside className="border-r bg-white p-4">
         <a href="/" className="text-sm block mb-4">← Zurück</a>
         <h2 className="font-semibold mb-3">Dokumente</h2>
+
+<a
+  href="/Szenario2_Vorlage.pdf"
+  target="_blank"
+  rel="noreferrer"
+  className="block mb-3 text-blue-600 underline"
+>
+  Szenario 2 – Vorlage (PDF öffnen)
+</a>
+
         <ul className="space-y-2">
           {items.map(it => (
             <li key={it.id}>
