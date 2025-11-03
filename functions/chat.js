@@ -1,51 +1,55 @@
 // Datei: netlify/functions/chat.js
-// Zweck: Hybrid-Flow – synchron bis 8 s, sonst 202 + Async-Callback.
+// Hybrid: synchron bis 8s, sonst 202 Accepted und Make läuft weiter.
+
+const j = (c, o) => ({
+  statusCode: c,
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(o),
+});
 
 export async function handler(event) {
-  if (!process.env.MAKE_GATEWAY_URL)
-    return { statusCode: 500, body: JSON.stringify({ error: 'MAKE_GATEWAY_URL not set' }) };
+  const body = JSON.parse(event.body || "{}");
 
-  const body = JSON.parse(event.body || '{}');
+  // 1) Env-Var wie vorher: NICHT umbenennen
+  const makeUrl = process.env.MAKE_WEBHOOK_URL;
+  if (!makeUrl) return j(500, { ok: false, error: "MAKE_WEBHOOK_URL missing" });
 
-  // Pflichtfelder prüfen
-  if (!body.conversation_id) 
-    return { statusCode: 400, body: JSON.stringify({ error: 'conversation_id missing' }) };
-  if (!body.callback_url) 
-    return { statusCode: 400, body: JSON.stringify({ error: 'callback_url missing' }) };
+  // 2) Optional prüfen, ob für spätere Async-Rückgabe ein Callback mitgeliefert wird
+  //    (Dein Make-Szenario sollte am Ende an body.callback_url posten)
+  const hasCallback = typeof body.callback_url === "string" && body.callback_url.startsWith("http");
 
-  const jobId = (globalThis.crypto ?? require('crypto')).randomUUID?.() 
-    || Math.random().toString(36).slice(2);
-
-  // 8 s "synchrones Fenster"
+  // 3) Bis zu 8s auf schnelle Antwort warten
   const controller = new AbortController();
   const kill = setTimeout(() => controller.abort(), 8000);
 
   try {
-    const resp = await fetch(process.env.MAKE_GATEWAY_URL, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...body, jobId }),
-      signal: controller.signal
+    const res = await fetch(makeUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal, // bricht NUR unsere Wartezeit ab; Make rechnet weiter
     });
 
     clearTimeout(kill);
 
-    // Make war schnell → direkt durchreichen
-    const text = await resp.text();
-    return { statusCode: resp.status, body: text };
+    // Make hat schnell geantwortet → wie früher durchreichen
+    const text = await res.text();
+    let reply = text;
+    try { reply = JSON.parse(text); } catch {}
+    return j(res.status || 200, { ok: true, reply });
 
-  } catch (e) {
+  } catch (err) {
     clearTimeout(kill);
 
-    // Zu langsam oder abgebrochen → asynchron weiterlaufen lassen
-    return {
-      statusCode: 202,
-      body: JSON.stringify({
-        status: 'accepted',
-        jobId,
-        conversation_id: body.conversation_id,
-        note: 'Antwort folgt in Kürze.'
-      })
-    };
+    // 4) Zu langsam / Timeout → sofort 202 zurückgeben
+    //    Make verarbeitet im Hintergrund weiter.
+    //    ACHTUNG: Damit später etwas im Chat ankommt, muss dein Make-Flow am Ende
+    //    ein HTTP-Request auf body.callback_url schicken.
+    return j(202, {
+      ok: true,
+      status: "accepted",
+      note: "Antwort folgt in Kürze.",
+      requires_callback: hasCallback, // true, wenn callback_url im Request war
+    });
   }
 }
