@@ -1,25 +1,23 @@
 import { blobs } from '@netlify/blobs'
 
-export async function handler(event) {
-  if (event.httpMethod !== 'POST') return new Response('Method', { status: 405 })
+export const handler = async (event) => {
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method' }
 
   const { title, mime = 'application/pdf', fileUrl, contentB64, meta = {} } =
     JSON.parse(event.body || '{}')
-  if (!title || (!fileUrl && !contentB64)) return new Response('Bad Request', { status: 400 })
+  if (!title || (!fileUrl && !contentB64)) return { statusCode: 400, body: 'Bad Request' }
 
   const docId = crypto.randomUUID()
 
-  // Datei holen
   let buf
   if (fileUrl) {
     const r = await fetch(fileUrl)
-    if (!r.ok) return new Response('Fetch failed', { status: 400 })
+    if (!r.ok) return { statusCode: 400, body: 'Fetch failed' }
     buf = new Uint8Array(await r.arrayBuffer())
   } else {
     buf = Buffer.from(contentB64, 'base64')
   }
 
-  // Speichern
   await blobs.set(`files/${docId}.pdf`, buf, { contentType: mime })
 
   const docMeta = {
@@ -28,13 +26,15 @@ export async function handler(event) {
   }
   await blobs.setJSON(`docs/${docId}.json`, docMeta)
 
-  // Index
   const idxKey = 'docs/index.json'
   const idx = (await blobs.getJSON(idxKey)) || { docIds: [] }
   idx.docIds.unshift(docId)
   await blobs.setJSON(idxKey, idx)
 
-  return new Response(JSON.stringify({ ok: true, docId }), {
-    headers: { 'Content-Type': 'application/json' }
-  })
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ok: true, docId }),
+  }
 }
+
