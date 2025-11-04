@@ -1,7 +1,6 @@
-// CommonJS-Version
-const { blobs } = require('@netlify/blobs')
+import { blobs } from '@netlify/blobs'
 
-exports.handler = async () => {
+export const handler = async () => {
   const idx = (await blobs.getJSON('docs/index.json')) || { docIds: [] }
   const docs = await Promise.all(idx.docIds.map(id => blobs.getJSON(`docs/${id}.json`)))
   return {
