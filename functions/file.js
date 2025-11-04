@@ -1,15 +1,19 @@
 import { blobs } from '@netlify/blobs'
 
-export async function handler(event) {
-  const url = new URL(event.rawUrl)
-  const id = url.searchParams.get('id')
-  if (!id) return new Response('Bad Request', { status: 400 })
+export const handler = async (event) => {
+  const id = new URL(event.rawUrl).searchParams.get('id')
+  if (!id) return { statusCode: 400, body: 'Bad Request' }
 
   const meta = await blobs.getJSON(`docs/${id}.json`)
-  if (!meta) return new Response('Not found', { status: 404 })
+  if (!meta) return { statusCode: 404, body: 'Not found' }
 
   const file = await blobs.get(`files/${id}.pdf`, { raw: true })
-  if (!file) return new Response('Not found', { status: 404 })
+  if (!file) return { statusCode: 404, body: 'Not found' }
 
-  return new Response(file.body, { headers: { 'Content-Type': meta.mime || 'application/pdf' } })
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': meta.mime || 'application/pdf' },
+    body: file.body,
+    isBase64Encoded: false,
+  }
 }
