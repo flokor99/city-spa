@@ -8,8 +8,6 @@ export const handler = async (event) => {
   if (!meta) return { statusCode: 404, body: 'Not found' }
 
   const file = await blobs.get(`files/${id}.pdf`, { raw: true })
-  if (!file) return { statusCode: 404, body: 'Not found' }
-
   return {
     statusCode: 200,
     headers: { 'Content-Type': meta.mime || 'application/pdf' },
