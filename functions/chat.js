@@ -7,7 +7,7 @@ export async function handler(event) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(29000)
+    signal: AbortSignal.timeout(60000)
   });
 
   const text = await res.text();
