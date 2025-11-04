@@ -1,9 +1,12 @@
-import { blobs } from '@netlify/blobs'
+// CommonJS-Version
+const { blobs } = require('@netlify/blobs')
 
-export async function handler() {
+exports.handler = async () => {
   const idx = (await blobs.getJSON('docs/index.json')) || { docIds: [] }
   const docs = await Promise.all(idx.docIds.map(id => blobs.getJSON(`docs/${id}.json`)))
-  return new Response(JSON.stringify(docs.filter(Boolean)), {
-    headers: { 'Content-Type': 'application/json' }
-  })
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(docs.filter(Boolean)),
+  }
 }
