@@ -1,6 +1,4 @@
-import { useState } from "react"
-import { AGENT_WEBHOOK_URL } from "./config"; // ← NEU
-  ;
+import { useState } from "react";
 
 export default function Chat() {
   const [messages, setMessages] = useState([{ role: "system", text: "Verbunden über /functions/chat" }]);
@@ -15,19 +13,11 @@ export default function Chat() {
     setInput("");
     setBusy(true);
     try {
-      // einfache ID für den Chat-Thread (kannst du später ersetzen)
-const conversationId = "chat-001"; 
-
-const r = await fetch("/.netlify/functions/chat", {
-  method: "POST",
-  headers: { "content-type": "application/json" },
-  body: JSON.stringify({
-    message: text,
-    conversation_id: conversationId,     // neu
-    callback_url: AGENT_WEBHOOK_URL      // neu
-  })
-});
-
+      const r = await fetch("/.netlify/functions/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
       const d = await r.json();
       const replyText =
         d?.reply?.message || d?.reply?.text || d?.reply?.answer || JSON.stringify(d.reply ?? d);
@@ -54,4 +44,3 @@ const r = await fetch("/.netlify/functions/chat", {
     </div>
   );
 }
-
