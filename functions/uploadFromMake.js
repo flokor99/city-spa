@@ -1,13 +1,12 @@
-import { blobs } from '@netlify/blobs'
-
-export const handler = async (event) => {
+exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method' }
 
+  const { blobs } = await import('@netlify/blobs')
   const { title, mime = 'application/pdf', fileUrl, contentB64, meta = {} } =
     JSON.parse(event.body || '{}')
   if (!title || (!fileUrl && !contentB64)) return { statusCode: 400, body: 'Bad Request' }
 
-  const docId = crypto.randomUUID()
+  const docId = (globalThis.crypto ?? require('crypto').webcrypto).randomUUID()
 
   let buf
   if (fileUrl) {
@@ -19,11 +18,7 @@ export const handler = async (event) => {
   }
 
   await blobs.set(`files/${docId}.pdf`, buf, { contentType: mime })
-
-  const docMeta = {
-    id: docId, title, mime, size: buf.length,
-    createdAt: new Date().toISOString(), meta
-  }
+  const docMeta = { id: docId, title, mime, size: buf.length, createdAt: new Date().toISOString(), meta }
   await blobs.setJSON(`docs/${docId}.json`, docMeta)
 
   const idxKey = 'docs/index.json'
@@ -31,10 +26,5 @@ export const handler = async (event) => {
   idx.docIds.unshift(docId)
   await blobs.setJSON(idxKey, idx)
 
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ok: true, docId }),
-  }
+  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, docId }) }
 }
-
