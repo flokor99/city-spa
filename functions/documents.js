@@ -1,8 +1,11 @@
-// functions/documents.js
 exports.handler = async () => {
   const { getStore } = await import('@netlify/blobs')
-  // Ein Store "docs" genügt für Index + Metadaten + Dateien
-  const store = await getStore('docs')
+
+  const store = await getStore({
+    name: 'docs',
+    siteID: process.env.MY_SITE_ID,
+    token: process.env.NETLIFY_API_TOKEN,
+  })
 
   const index = (await store.getJSON('index.json')) || { docIds: [] }
   const docs = await Promise.all(
