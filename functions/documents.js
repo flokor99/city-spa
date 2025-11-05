@@ -1,3 +1,4 @@
+// functions/documents.js  (CommonJS + manueller JSON-Parse)
 exports.handler = async () => {
   const { getStore } = await import('@netlify/blobs')
 
@@ -7,9 +8,18 @@ exports.handler = async () => {
     token: process.env.NETLIFY_API_TOKEN,
   })
 
-  const index = (await store.getJSON('index.json')) || { docIds: [] }
+  const td = new TextDecoder()
+
+  // Index laden
+  const idxBuf = await store.get('index.json') // Uint8Array oder null
+  const index = idxBuf ? JSON.parse(td.decode(idxBuf)) : { docIds: [] }
+
+  // Metadaten je Dokument laden
   const docs = await Promise.all(
-    index.docIds.map(id => store.getJSON(`meta/${id}.json`))
+    index.docIds.map(async (id) => {
+      const metaBuf = await store.get(`meta/${id}.json`)
+      return metaBuf ? JSON.parse(td.decode(metaBuf)) : null
+    })
   )
 
   return {
