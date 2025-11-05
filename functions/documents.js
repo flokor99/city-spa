@@ -1,7 +1,6 @@
-// functions/documents.js  (CommonJS + manueller JSON-Parse)
+// functions/documents.js – robustes Laden (String ODER Bytes)
 exports.handler = async () => {
   const { getStore } = await import('@netlify/blobs')
-
   const store = await getStore({
     name: 'docs',
     siteID: process.env.MY_SITE_ID,
@@ -10,15 +9,21 @@ exports.handler = async () => {
 
   const td = new TextDecoder()
 
-  // Index laden
-  const idxBuf = await store.get('index.json') // Uint8Array oder null
-  const index = idxBuf ? JSON.parse(td.decode(idxBuf)) : { docIds: [] }
+  // Index laden (kann String ODER Uint8Array sein)
+  const rawIdx = await store.get('index.json')
+  const idxText =
+    rawIdx == null
+      ? null
+      : (typeof rawIdx === 'string' ? rawIdx : td.decode(rawIdx))
+  const index = idxText ? JSON.parse(idxText) : { docIds: [] }
 
-  // Metadaten je Dokument laden
+  // Metadaten je Dokument (ebenfalls String ODER Bytes)
   const docs = await Promise.all(
     index.docIds.map(async (id) => {
-      const metaBuf = await store.get(`meta/${id}.json`)
-      return metaBuf ? JSON.parse(td.decode(metaBuf)) : null
+      const rawMeta = await store.get(`meta/${id}.json`)
+      if (rawMeta == null) return null
+      const metaText = typeof rawMeta === 'string' ? rawMeta : td.decode(rawMeta)
+      return JSON.parse(metaText)
     })
   )
 
