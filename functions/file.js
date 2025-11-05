@@ -1,4 +1,4 @@
-// functions/file.js  (CommonJS + Netlify Blobs Store)
+// functions/file.js  – robustes Lesen (String ODER Bytes)
 exports.handler = async (event) => {
   const { getStore } = await import('@netlify/blobs')
   const store = await getStore({
@@ -12,19 +12,28 @@ exports.handler = async (event) => {
 
   const td = new TextDecoder()
 
-  // Metadaten lesen
-  const metaBuf = await store.get(`meta/${id}.json`)
-  if (!metaBuf) return { statusCode: 404, body: 'Not found' }
-  const meta = JSON.parse(td.decode(metaBuf))
+  // Metadaten lesen (können String ODER Bytes sein)
+  const rawMeta = await store.get(`meta/${id}.json`)
+  if (rawMeta == null) return { statusCode: 404, body: 'Not found' }
+  const metaText = typeof rawMeta === 'string' ? rawMeta : td.decode(rawMeta)
+  const meta = JSON.parse(metaText)
 
-  // Datei lesen
+  // Datei lesen (PDF als Bytes)
   const fileBytes = await store.get(`files/${id}.pdf`)
   if (!fileBytes) return { statusCode: 404, body: 'Not found' }
 
-  // Als Base64 zurückgeben
-  const b64 = Buffer.from(fileBytes).toString('base64')
+  const b64 = Buffer.from(
+    typeof fileBytes === 'string' ? Buffer.from(fileBytes) : fileBytes
+  ).toString('base64')
+
   return {
     statusCode: 200,
+    headers: { 'Content-Type': meta.mime || 'application/pdf' },
+    body: b64,
+    isBase64Encoded: true,
+  }
+}
+
     headers: { 'Content-Type': meta.mime || 'application/pdf' },
     body: b64,
     isBase64Encoded: true,
