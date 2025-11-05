@@ -1,8 +1,14 @@
-// CJS + dynamischer Import
+// functions/documents.js
 exports.handler = async () => {
-  const { blobs } = await import('@netlify/blobs')
-  const idx = (await blobs.getJSON('docs/index.json')) || { docIds: [] }
-  const docs = await Promise.all(idx.docIds.map(id => blobs.getJSON(`docs/${id}.json`)))
+  const { getStore } = await import('@netlify/blobs')
+  // Ein Store "docs" genügt für Index + Metadaten + Dateien
+  const store = await getStore('docs')
+
+  const index = (await store.getJSON('index.json')) || { docIds: [] }
+  const docs = await Promise.all(
+    index.docIds.map(id => store.getJSON(`meta/${id}.json`))
+  )
+
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
