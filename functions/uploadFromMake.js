@@ -1,51 +1,29 @@
-// functions/uploadFromMake.js  (CommonJS + Netlify Blobs Store)
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' }
-
-  const { getStore } = await import('@netlify/blobs')
-  const store = await getStore({
-    name: 'docs',
-    siteID: process.env.MY_SITE_ID,
-    token: process.env.NETLIFY_API_TOKEN,
-  })
-
-  const { title, mime = 'application/pdf', fileUrl, contentB64, meta = {} } =
-    JSON.parse(event.body || '{}')
-  if (!title || (!fileUrl && !contentB64)) return { statusCode: 400, body: 'Bad Request' }
-
-  // neue ID
-  const docId = (globalThis.crypto ?? require('crypto').webcrypto).randomUUID()
-
+// …
   // Datei laden
-  let bytes
+  let saveAsBase64 = null
+  let bytes = null
+
   if (fileUrl) {
+    // Wenn du per URL lädst, bleiben wir bei Bytes
     const r = await fetch(fileUrl)
     if (!r.ok) return { statusCode: 400, body: 'Fetch failed' }
     bytes = new Uint8Array(await r.arrayBuffer())
   } else {
-    bytes = Buffer.from(contentB64, 'base64')
+    // WICHTIG: Base64 nicht selbst dekodieren,
+    // sondern direkt als base64 in den Blob schreiben.
+    saveAsBase64 = contentB64
   }
 
   // Datei speichern
-  await store.set(`files/${docId}.pdf`, bytes, { contentType: mime })
-
-  // Metadaten speichern
-  const td = new TextDecoder(); const te = new TextEncoder()
-  const metaObj = {
-    id: docId, title, mime, size: bytes.length,
-    createdAt: new Date().toISOString(), meta
+  if (saveAsBase64) {
+    await store.set(`files/${docId}.pdf`, saveAsBase64, {
+      contentType: mime,
+      encoding: 'base64',        // <- entscheidend
+    })
+  } else {
+    await store.set(`files/${docId}.pdf`, bytes, {
+      contentType: mime,
+    })
   }
-  await store.set(`meta/${docId}.json`, te.encode(JSON.stringify(metaObj)), { contentType: 'application/json' })
+// …
 
-  // Index aktualisieren
-  const idxBuf = await store.get('index.json')
-  const index = idxBuf ? JSON.parse(td.decode(idxBuf)) : { docIds: [] }
-  if (!index.docIds.includes(docId)) index.docIds.unshift(docId)
-  await store.set('index.json', te.encode(JSON.stringify(index)), { contentType: 'application/json' })
-
-  return {
-    statusCode: 200,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ok: true, docId })
-  }
-}
