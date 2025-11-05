@@ -1,4 +1,4 @@
-// functions/file.js — sendet echtes Binary mit Content-Length
+// functions/file.js — Lambda-Response, Base64
 exports.handler = async (event) => {
   const { getStore } = await import('@netlify/blobs')
 
@@ -9,27 +9,29 @@ exports.handler = async (event) => {
   })
 
   const id = new URL(event.rawUrl).searchParams.get('id')
-  if (!id) return new Response('Bad Request', { status: 400 })
+  if (!id) return { statusCode: 400, body: 'Bad Request' }
 
   // Meta lesen
   const metaRaw = await store.get(`meta/${id}.json`)
-  if (metaRaw == null) return new Response('Not found', { status: 404 })
+  if (metaRaw == null) return { statusCode: 404, body: 'Not found' }
   const metaStr = typeof metaRaw === 'string' ? metaRaw : Buffer.from(metaRaw).toString('utf8')
-  let meta; try { meta = JSON.parse(metaStr) } catch { return new Response('Meta parse error', { status: 500 }) }
+  let meta; try { meta = JSON.parse(metaStr) } catch { return { statusCode: 500, body: 'Meta parse error' } }
 
-  // PDF lesen
+  // PDF lesen → Buffer → Base64
   const fileRaw = await store.get(`files/${id}.pdf`)
-  if (fileRaw == null) return new Response('Not found', { status: 404 })
+  if (fileRaw == null) return { statusCode: 404, body: 'Not found' }
   const buf = Buffer.isBuffer(fileRaw) ? fileRaw : Buffer.from(fileRaw)
+  const b64 = buf.toString('base64')
 
-  return new Response(buf, {
-    status: 200,
+  return {
+    statusCode: 200,
     headers: {
       'Content-Type': meta.mime || 'application/pdf',
       'Content-Disposition': `inline; filename="${meta.title || id}.pdf"`,
-      'Content-Length': String(buf.length),
       'Cache-Control': 'no-store'
-    }
-  })
+    },
+    body: b64,
+    isBase64Encoded: true
+  }
 }
 
