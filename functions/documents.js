@@ -1,6 +1,6 @@
-import { blobs } from '@netlify/blobs'
-
-export const handler = async () => {
+// CJS + dynamischer Import
+exports.handler = async () => {
+  const { blobs } = await import('@netlify/blobs')
   const idx = (await blobs.getJSON('docs/index.json')) || { docIds: [] }
   const docs = await Promise.all(idx.docIds.map(id => blobs.getJSON(`docs/${id}.json`)))
   return {
