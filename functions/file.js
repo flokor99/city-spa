@@ -1,4 +1,4 @@
-// functions/file.js  — CommonJS, ohne exotische Syntax
+// functions/file.js — korrektes Binary-Response für PDF
 exports.handler = async (event) => {
   const { getStore } = await import('@netlify/blobs')
 
@@ -11,32 +11,29 @@ exports.handler = async (event) => {
   const id = new URL(event.rawUrl).searchParams.get('id')
   if (!id) return { statusCode: 400, body: 'Bad Request' }
 
-  // Metadaten lesen (String ODER Bytes)
+  // Metadaten lesen
   const metaRaw = await store.get(`meta/${id}.json`)
   if (metaRaw == null) return { statusCode: 404, body: 'Not found' }
-  const metaText =
-    typeof metaRaw === 'string' ? metaRaw : Buffer.from(metaRaw).toString('utf8')
-
+  const metaStr = typeof metaRaw === 'string' ? metaRaw : Buffer.from(metaRaw).toString('utf8')
   let meta
-  try {
-    meta = JSON.parse(metaText)
-  } catch {
-    return { statusCode: 500, body: 'Meta parse error' }
-  }
+  try { meta = JSON.parse(metaStr) } catch { return { statusCode: 500, body: 'Meta parse error' } }
 
-  // PDF lesen (String ODER Bytes)
-  const dataRaw = await store.get(`files/${id}.pdf`)
-  if (dataRaw == null) return { statusCode: 404, body: 'Not found' }
+  // PDF lesen, immer in Buffer wandeln
+  const fileRaw = await store.get(`files/${id}.pdf`)
+  if (fileRaw == null) return { statusCode: 404, body: 'Not found' }
+  const buf = Buffer.isBuffer(fileRaw) ? fileRaw : Buffer.from(fileRaw)
 
-  const b64 =
-    typeof dataRaw === 'string'
-      ? Buffer.from(dataRaw, 'utf8').toString('base64')
-      : Buffer.from(dataRaw).toString('base64')
-
+  // Base64-Body + Binary-Header
+  const b64 = buf.toString('base64')
   return {
     statusCode: 200,
-    headers: { 'Content-Type': meta.mime || 'application/pdf' },
+    headers: {
+      'Content-Type': meta.mime || 'application/pdf',
+      'Content-Disposition': `inline; filename="${meta.title || id}.pdf"`,
+      'Cache-Control': 'no-store'
+    },
     body: b64,
     isBase64Encoded: true
   }
 }
+
