@@ -1,4 +1,4 @@
-// functions/file.js — PDF mit Byte-Range Support (Edge/Chrome Viewer)
+// functions/file.js — Byte-Range, Base64-Body, ohne Content-Length
 exports.handler = async (event) => {
   const { getStore } = await import('@netlify/blobs')
 
@@ -11,7 +11,7 @@ exports.handler = async (event) => {
   const id = new URL(event.rawUrl).searchParams.get('id')
   if (!id) return { statusCode: 400, body: 'Bad Request' }
 
-  // Metadaten
+  // Meta
   const metaRaw = await store.get(`meta/${id}.json`)
   if (!metaRaw) return { statusCode: 404, body: 'Not found' }
   const metaStr = typeof metaRaw === 'string' ? metaRaw : Buffer.from(metaRaw).toString('utf8')
@@ -23,13 +23,15 @@ exports.handler = async (event) => {
   const buf = Buffer.isBuffer(fileRaw) ? fileRaw : Buffer.from(fileRaw)
   const total = buf.length
 
-  // Range-Header parsen
-  const range = (event.headers && (event.headers.range || event.headers.Range)) || null
+  // Range-Header
+  const hdrs = event.headers || {}
+  const range = hdrs.range || hdrs.Range || null
+
   if (range && /^bytes=\d*-\d*$/.test(range)) {
-    const [startStr, endStr] = range.replace(/bytes=/, '').split('-')
-    const start = Math.max(0, parseInt(startStr || '0', 10))
-    const end = Math.min(total - 1, endStr ? parseInt(endStr, 10) : start + 1024 * 1024 - 1) // ~1MB
-    if (isNaN(start) || isNaN(end) || start > end) {
+    const [s, e] = range.replace('bytes=', '').split('-')
+    const start = Math.max(0, parseInt(s || '0', 10))
+    const end = Math.min(total - 1, e ? parseInt(e, 10) : start + 1024 * 1024 - 1)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) {
       return { statusCode: 416, headers: { 'Content-Range': `bytes */${total}` }, body: '' }
     }
     const chunk = buf.subarray(start, end + 1)
@@ -40,7 +42,6 @@ exports.handler = async (event) => {
         'Content-Disposition': `inline; filename="${meta.title || id}.pdf"`,
         'Accept-Ranges': 'bytes',
         'Content-Range': `bytes ${start}-${end}/${total}`,
-        'Content-Length': String(chunk.length),
         'Cache-Control': 'no-store'
       },
       body: chunk.toString('base64'),
@@ -55,11 +56,9 @@ exports.handler = async (event) => {
       'Content-Type': meta.mime || 'application/pdf',
       'Content-Disposition': `inline; filename="${meta.title || id}.pdf"`,
       'Accept-Ranges': 'bytes',
-      'Content-Length': String(total),
       'Cache-Control': 'no-store'
     },
     body: buf.toString('base64'),
     isBase64Encoded: true
   }
 }
-
