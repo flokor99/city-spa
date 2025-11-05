@@ -1,30 +1,51 @@
+// functions/uploadFromMake.js  (CommonJS + Netlify Blobs Store)
 exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method' }
+  if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' }
 
-  const { blobs } = await import('@netlify/blobs')
+  const { getStore } = await import('@netlify/blobs')
+  const store = await getStore({
+    name: 'docs',
+    siteID: process.env.MY_SITE_ID,
+    token: process.env.NETLIFY_API_TOKEN,
+  })
+
   const { title, mime = 'application/pdf', fileUrl, contentB64, meta = {} } =
     JSON.parse(event.body || '{}')
   if (!title || (!fileUrl && !contentB64)) return { statusCode: 400, body: 'Bad Request' }
 
+  // neue ID
   const docId = (globalThis.crypto ?? require('crypto').webcrypto).randomUUID()
 
-  let buf
+  // Datei laden
+  let bytes
   if (fileUrl) {
     const r = await fetch(fileUrl)
     if (!r.ok) return { statusCode: 400, body: 'Fetch failed' }
-    buf = new Uint8Array(await r.arrayBuffer())
+    bytes = new Uint8Array(await r.arrayBuffer())
   } else {
-    buf = Buffer.from(contentB64, 'base64')
+    bytes = Buffer.from(contentB64, 'base64')
   }
 
-  await blobs.set(`files/${docId}.pdf`, buf, { contentType: mime })
-  const docMeta = { id: docId, title, mime, size: buf.length, createdAt: new Date().toISOString(), meta }
-  await blobs.setJSON(`docs/${docId}.json`, docMeta)
+  // Datei speichern
+  await store.set(`files/${docId}.pdf`, bytes, { contentType: mime })
 
-  const idxKey = 'docs/index.json'
-  const idx = (await blobs.getJSON(idxKey)) || { docIds: [] }
-  idx.docIds.unshift(docId)
-  await blobs.setJSON(idxKey, idx)
+  // Metadaten speichern
+  const td = new TextDecoder(); const te = new TextEncoder()
+  const metaObj = {
+    id: docId, title, mime, size: bytes.length,
+    createdAt: new Date().toISOString(), meta
+  }
+  await store.set(`meta/${docId}.json`, te.encode(JSON.stringify(metaObj)), { contentType: 'application/json' })
 
-  return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ok: true, docId }) }
+  // Index aktualisieren
+  const idxBuf = await store.get('index.json')
+  const index = idxBuf ? JSON.parse(td.decode(idxBuf)) : { docIds: [] }
+  if (!index.docIds.includes(docId)) index.docIds.unshift(docId)
+  await store.set('index.json', te.encode(JSON.stringify(index)), { contentType: 'application/json' })
+
+  return {
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ok: true, docId })
+  }
 }
