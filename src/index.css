@@ -3,3 +3,31 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
+/* ==== City Profiler: Design Tokens (ohne npm) ==== */
+:root {
+  /* Farben aus dem PDF-Stil */
+  --cp-primary: #1C75BC; /* Blau (Primär) */
+  --cp-accent:  #00AEEF; /* Hellblau (Akzent) */
+  --cp-ink:     #333333; /* Fließtext */
+  --cp-muted:   #777777; /* Meta/Quelle */
+  --cp-line:    #E5E5E5; /* Linien/Rahmen */
+  --cp-bg:      #FFFFFF; /* Hintergrund */
+}
+
+/* Basis-Setup */
+html, body, #root {
+  height: 100%;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Inter als Standard-Schrift aktivieren */
+body {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+/* (Optional) sehr dezente Hilfsklassen – sofort nutzbar im Markup */
+.cp-muted { color: var(--cp-muted); }
+.cp-line  { border-color: var(--cp-line); }
