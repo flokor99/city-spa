@@ -8,6 +8,15 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Hilfsfunktion: liest den richtigen Antworttext aus dem JSON
+  const getReplyText = (d) =>
+    (typeof d?.reply === "string" && d.reply) ||
+    d?.reply?.message ||
+    d?.reply?.text ||
+    d?.message ||
+    d?.text ||
+    "…";
+
   const sendText = async (text) => {
     const t = text.trim();
     if (!t || busy) return;
@@ -21,11 +30,16 @@ export default function Chat() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: t }),
       });
+
       const d = await r.json();
-      const replyText = d?.reply?.message || d?.reply?.text || "…";
+      const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
-    } catch {
-      setMessages((m) => [...m, { role: "system", text: "Fehler beim Senden." }]);
+    } catch (err) {
+      console.error("Chat-Fehler:", err);
+      setMessages((m) => [
+        ...m,
+        { role: "system", text: "Fehler beim Senden." },
+      ]);
     } finally {
       setBusy(false);
     }
@@ -43,9 +57,10 @@ export default function Chat() {
     const params = new URLSearchParams(window.location.search);
     const city = params.get("city");
     if (city) {
-      sendText(`Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`);
-      // Query-Param optional entfernen:
-      window.history.replaceState({}, "", "/chat");
+      sendText(
+        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`
+      );
+      window.history.replaceState({}, "", "/chat"); // Query-Param entfernen
     }
   }, []);
 
@@ -53,17 +68,32 @@ export default function Chat() {
     const isUser = role === "user";
     const isSystem = role === "system";
     return (
-      <div className={`w-full flex ${isUser ? "justify-end" : "justify-start"} my-2`}>
+      <div
+        className={`w-full flex ${
+          isUser ? "justify-end" : "justify-start"
+        } my-2`}
+      >
         <div
           className="max-w-[72ch] rounded-2xl px-4 py-3 border"
           style={{
-            background: isUser ? "rgba(0,174,239,0.10)" : "var(--cp-bg)",
+            background: isUser
+              ? "rgba(0,174,239,0.10)"
+              : "var(--cp-bg)",
             borderColor: "var(--cp-line)",
-            color: isSystem ? "var(--cp-muted)" : "var(--cp-ink)",
+            color: isSystem
+              ? "var(--cp-muted)"
+              : "var(--cp-ink)",
           }}
         >
-          <div className="cp-small mb-1x" style={{ color: "var(--cp-muted)" }}>
-            {isUser ? "Du" : isSystem ? "System" : "City Profiler"}
+          <div
+            className="cp-small mb-1x"
+            style={{ color: "var(--cp-muted)" }}
+          >
+            {isUser
+              ? "Du"
+              : isSystem
+              ? "System"
+              : "City Profiler"}
           </div>
           <div className="cp-body">{children}</div>
         </div>
@@ -73,22 +103,54 @@ export default function Chat() {
 
   return (
     <AppShell title="Chat">
-      <a href="/" className="cp-small cp-link">← Zurück</a>
+      <a href="/" className="cp-small cp-link">
+        ← Zurück
+      </a>
 
-      <div className="inline-block mt-3 mb-4 rounded-full px-3 py-1 border cp-small"
-           style={{ borderColor: "var(--cp-line)", color: "var(--cp-muted)", background: "var(--cp-bg)" }}>
-        Verbunden über <span style={{ color: "var(--cp-primary)", fontWeight: 600 }}>/functions/chat</span>
+      <div
+        className="inline-block mt-3 mb-4 rounded-full px-3 py-1 border cp-small"
+        style={{
+          borderColor: "var(--cp-line)",
+          color: "var(--cp-muted)",
+          background: "var(--cp-bg)",
+        }}
+      >
+        Verbunden über{" "}
+        <span
+          style={{
+            color: "var(--cp-primary)",
+            fontWeight: 600,
+          }}
+        >
+          /functions/chat
+        </span>
       </div>
 
-      <div className="rounded-2xl border" style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}>
+      <div
+        className="rounded-2xl border"
+        style={{
+          borderColor: "var(--cp-line)",
+          background: "#F7F8FA",
+        }}
+      >
+        {/* Nachrichtenbereich */}
         <div className="p-4 h-[56vh] overflow-y-auto">
           {messages.map((m, i) => (
-            <Bubble key={i} role={m.role}>{m.text}</Bubble>
+            <Bubble key={i} role={m.role}>
+              {m.text}
+            </Bubble>
           ))}
         </div>
 
-        <form onSubmit={onSubmit} className="p-3 border-t flex gap-2 items-center"
-              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}>
+        {/* Eingabezeile */}
+        <form
+          onSubmit={onSubmit}
+          className="p-3 border-t flex gap-2 items-center"
+          style={{
+            borderColor: "var(--cp-line)",
+            background: "var(--cp-bg)",
+          }}
+        >
           <input
             type="text"
             placeholder="Nachricht…"
