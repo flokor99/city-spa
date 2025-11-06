@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ==== City Profiler: Design Tokens (ohne npm) ==== */
+/* ==== City Profiler: Design Tokens ==== */
 :root {
   /* Farben aus dem PDF-Stil */
   --cp-primary: #1C75BC; /* Blau (Primär) */
@@ -12,12 +12,32 @@
   --cp-line:    #E5E5E5; /* Linien/Rahmen */
   --cp-bg:      #FFFFFF; /* Hintergrund */
 
-  /* Neue Corporate-Farben für Header */
-  --cp-navy:   #0D2240; /* Dunkelblau (Header-Hintergrund) */
+  /* Corporate Header-Farben */
+  --cp-navy:   #0D2240; /* Dunkelblau (Header) */
   --cp-orange: #F26522; /* Orange (Akzentlinie) */
+
+  /* Typo-Skala */
+  --cp-h1: 22px;   /* Haupttitel / Bereichstitel */
+  --cp-h2: 18px;   /* Abschnittstitel */
+  --cp-h3: 15px;   /* Untertitel / Label */
+  --cp-body: 14px; /* Standard-Text */
+  --cp-small: 12px;/* Meta / Quelle */
+
+  /* Zeilenhöhen */
+  --cp-lh-title: 1.25;
+  --cp-lh-body: 1.6;
+
+  /* Spacing (4pt-Raster) */
+  --cp-s-1: 4px;
+  --cp-s-2: 8px;
+  --cp-s-3: 12px;
+  --cp-s-4: 16px;
+  --cp-s-5: 24px;
+  --cp-s-6: 32px;
+  --cp-s-8: 48px;
 }
 
-/* Basis-Setup */
+/* ==== Grundlayout ==== */
 html, body, #root {
   height: 100%;
   background: var(--cp-bg);
@@ -26,14 +46,57 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Inter als Standard-Schrift aktivieren */
+/* ==== Schrift ==== */
 body {
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
-/* (Optional) dezente Hilfsklassen – sofort nutzbar im Markup */
-.cp-muted { color: var(--cp-muted); }
-.cp-line  { border-color: var(--cp-line); }
+/* ==== Typo-Hilfsklassen ==== */
+.cp-h1 {
+  font-size: var(--cp-h1);
+  line-height: var(--cp-lh-title);
+  font-weight: 700;
+  color: var(--cp-primary);
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
+.cp-h2 {
+  font-size: var(--cp-h2);
+  line-height: var(--cp-lh-title);
+  font-weight: 600;
+  color: var(--cp-primary);
+  letter-spacing: .2px;
+}
+
+.cp-h3 {
+  font-size: var(--cp-h3);
+  line-height: var(--cp-lh-title);
+  font-weight: 600;
+  color: var(--cp-ink);
+}
+
+.cp-body {
+  font-size: var(--cp-body);
+  line-height: var(--cp-lh-body);
+  color: var(--cp-ink);
+}
+
+.cp-small {
+  font-size: var(--cp-small);
+  line-height: var(--cp-lh-body);
+  color: var(--cp-muted);
+}
+
+/* ==== Spacing-Hilfsklassen ==== */
+.mt-1x { margin-top: var(--cp-s-1); } .mt-2x { margin-top: var(--cp-s-2); }
+.mt-3x { margin-top: var(--cp-s-3); } .mt-4x { margin-top: var(--cp-s-4); }
+.mt-5x { margin-top: var(--cp-s-5); } .mt-6x { margin-top: var(--cp-s-6); }
+.mb-1x { margin-bottom: var(--cp-s-1); } .mb-2x { margin-bottom: var(--cp-s-2); }
+.mb-3x { margin-bottom: var(--cp-s-3); } .mb-4x { margin-bottom: var(--cp-s-4); }
+.mb-5x { margin-bottom: var(--cp-s-5); } .mb-6x { margin-bottom: var(--cp-s-6); }
+
 /* ==== Corporate UI Patterns ==== */
 .cp-card {
   background: var(--cp-bg);
@@ -42,23 +105,47 @@ body {
   box-shadow: 0 1px 2px rgba(0,0,0,.04);
   transition: box-shadow .15s ease, border-color .15s ease, transform .05s ease;
 }
-.cp-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.06); border-color: var(--cp-primary); }
+.cp-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  border-color: var(--cp-primary);
+}
 
 .cp-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 10px 16px; border-radius: 12px; font-weight: 600;
-  background: var(--cp-primary); color: #fff; border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: var(--cp-primary);
+  color: #fff;
+  border: 0;
   transition: filter .15s ease, transform .05s ease;
 }
 .cp-btn:hover { filter: brightness(1.05); }
 .cp-btn:active { transform: translateY(1px); }
 .cp-btn:disabled { opacity: .6; cursor: not-allowed; }
 
-.cp-link { color: var(--cp-primary); font-weight: 600; }
+.cp-link {
+  color: var(--cp-primary);
+  font-weight: 600;
+}
 .cp-link:hover { text-decoration: underline; }
 
 .cp-input {
-  width: 100%; background: var(--cp-bg); color: var(--cp-ink);
-  border: 1px solid var(--cp-line); border-radius: 12px; padding: 10px 12px;
+  width: 100%;
+  background: var(--cp-bg);
+  color: var(--cp-ink);
+  border: 1px solid var(--cp-line);
+  border-radius: 12px;
+  padding: 10px 12px;
 }
-.cp-input:focus { outline: 0; border-color: var(--cp-primary); box-shadow: 0 0 0 3px rgba(28,117,188,.15); }
+.cp-input:focus {
+  outline: 0;
+  border-color: var(--cp-primary);
+  box-shadow: 0 0 0 3px rgba(28,117,188,.15);
+}
+
+/* ==== Kleine Hilfsklassen ==== */
+.cp-muted { color: var(--cp-muted); }
+.cp-line  { border-color: var(--cp-line); }
