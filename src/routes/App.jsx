@@ -40,7 +40,7 @@ export default function App() {
             </div>
 
             {/* Bild-Panel: Leichtes „Report“-Feeling */}
-            <figure className="hidden md:block rounded-xl overflow-hidden border"
+            <figure className="block rounded-xl overflow-hidden border"
               style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
             >
               {/* Lege eine Vorschau deines PDF-Outputs unter /public/assets/output-thumb.jpg ab */}
