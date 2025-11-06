@@ -2,11 +2,7 @@ import AppShell from "../components/AppShell.jsx";
 
 export default function App() {
   const Card = ({ href, title, desc }) => (
-    <a
-      href={href}
-      className="block rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-[var(--cp-bg)]"
-      style={{ borderColor: "var(--cp-line)" }}
-    >
+    <a href={href} className="cp-card block p-6">
       <h2 className="text-xl font-semibold text-[var(--cp-primary)]">{title}</h2>
       <p className="text-sm text-[var(--cp-muted)] mt-1">{desc}</p>
     </a>
@@ -14,55 +10,41 @@ export default function App() {
 
   return (
     <AppShell title="City Profiler">
-      {/* Hero / Einleitung */}
-      <section
-        className="rounded-2xl border mb-8"
-        style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
-      >
-        <div className="px-6 py-7">
-         <h1 className="cp-h1 mb-2x">Willkommen</h1>
-<p className="cp-body mb-4x">Wähle einen Bereich aus, um fortzufahren:</p>
+      <main className="max-w-5xl mx-auto p-6 space-y-6">
+        {/* Titel */}
+        <h1 className="cp-h1 mb-2x">Willkommen</h1>
 
-          <div
-            className="mt-4"
-            style={{ height: 2, background: "var(--cp-line)", width: 72 }}
+        {/* Einleitungstext */}
+        <p className="cp-body mb-5x">
+          Der <strong>Ströer City Profiler</strong> ordnet Städte anhand von vier
+          Zukunftsszenarien ein, die in der Foresight Academy entstanden sind. Er
+          vergleicht die aktuelle Position und Entwicklung einer Stadt mit der
+          kommunizierten Zielrichtung – und macht daraus konkreten Handlungsbedarf
+          sichtbar. Zudem liefert er Ideen und bewertet deren Wirkung zur
+          Zielerreichung. <strong>So unterstützt er die Kommunikation mit der Stadt
+          und trägt dazu bei, Ströer als strategischen Partner zu positionieren.</strong>
+        </p>
+
+        {/* Kacheln */}
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Card
+            href="/chat"
+            title="Chat"
+            desc="Stelle Fragen oder interagiere direkt mit dem City Profiler."
+          />
+          <Card
+            href="/dokumente"
+            title="Dokumente"
+            desc="Greife auf generierte PDF-Analysen und Stadtberichte zu."
+          />
+          <Card
+            href="/wissen"
+            title="Wissen"
+            desc="Erhalte Hintergrundwissen zu Szenarien, Kriterien und Methodik."
           />
         </div>
-
-        {/* Optionales Screenshot-Element (rechts) */}
-        <div className="px-6 pb-6">
-          <div className="grid md:grid-cols-3 gap-4 items-start">
-            <div className="md:col-span-2">
-              {/* Leer – hier bleibt nur der Textbereich aus dem Block oben */}
-            </div>
-
-            {/* Bild-Panel: Leichtes „Report“-Feeling */}
-            <figure className="block rounded-xl overflow-hidden border"
-              style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
-            >
-              {/* Lege eine Vorschau deines PDF-Outputs unter /public/assets/output-thumb.jpg ab */}
-              <img
-                src="/assets/output-thumb.jpg"
-                alt="City Profiler Output (Vorschau)"
-                className="w-full h-40 object-cover opacity-90"
-                onError={(e)=>{ e.currentTarget.style.display='none'; }}
-              />
-              <figcaption className="px-3 py-2 text-xs text-[var(--cp-muted)]">
-                Beispielhafter Output-Ausschnitt (Szenarien/KPIs)
-              </figcaption>
-            </figure>
-          </div>
-        </div>
-      </section>
-
-      {/* Drei Funktions-Kacheln */}
-      <section className="max-w-5xl">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Card href="/chat" title="Chat" desc="Fragen stellen – Oberfläche nur." />
-          <Card href="/dokumente" title="Dokumente" desc="Liste + PDF-Viewer. Platzhalter." />
-          <Card href="/wissen" title="Wissen" desc="Texte zu Szenarien." />
-        </div>
-      </section>
+      </main>
     </AppShell>
   );
 }
+
