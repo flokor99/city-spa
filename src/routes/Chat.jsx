@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 
 export default function Chat() {
@@ -8,59 +8,61 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const send = async (e) => {
-    e.preventDefault();
-    const text = input.trim();
-    if (!text || busy) return;
+  const sendText = async (text) => {
+    const t = text.trim();
+    if (!t || busy) return;
 
-    setMessages((m) => [...m, { role: "user", text }]);
-    setInput("");
+    setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
     try {
       const r = await fetch("/.netlify/functions/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: t }),
       });
       const d = await r.json();
       const replyText = d?.reply?.message || d?.reply?.text || "…";
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
-    } catch (err) {
-      setMessages((m) => [
-        ...m,
-        { role: "system", text: "Fehler beim Senden." },
-      ]);
+    } catch {
+      setMessages((m) => [...m, { role: "system", text: "Fehler beim Senden." }]);
     } finally {
       setBusy(false);
     }
   };
 
-  // Chat-Blasen
+  const onSubmit = (e) => {
+    e.preventDefault();
+    sendText(input);
+    setInput("");
+  };
+
+  // Auto-Start, wenn ?city=… in der URL steht
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const city = params.get("city");
+    if (city) {
+      sendText(`Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`);
+      // Query-Param optional entfernen:
+      window.history.replaceState({}, "", "/chat");
+    }
+  }, []);
+
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
     const isSystem = role === "system";
-
     return (
-      <div
-        className={`w-full flex ${
-          isUser ? "justify-end" : "justify-start"
-        } my-2`}
-      >
+      <div className={`w-full flex ${isUser ? "justify-end" : "justify-start"} my-2`}>
         <div
           className="max-w-[72ch] rounded-2xl px-4 py-3 border"
           style={{
-            background: isUser
-              ? "rgba(0,174,239,0.10)" // Hellblau für User
-              : "var(--cp-bg)",
+            background: isUser ? "rgba(0,174,239,0.10)" : "var(--cp-bg)",
             borderColor: "var(--cp-line)",
             color: isSystem ? "var(--cp-muted)" : "var(--cp-ink)",
           }}
         >
-          <div
-            className="cp-small mb-1x"
-            style={{ color: "var(--cp-muted)" }}
-          >
+          <div className="cp-small mb-1x" style={{ color: "var(--cp-muted)" }}>
             {isUser ? "Du" : isSystem ? "System" : "City Profiler"}
           </div>
           <div className="cp-body">{children}</div>
@@ -71,51 +73,22 @@ export default function Chat() {
 
   return (
     <AppShell title="Chat">
-      {/* Zurück-Link */}
-      <a href="/" className="cp-small cp-link">
-        ← Zurück
-      </a>
+      <a href="/" className="cp-small cp-link">← Zurück</a>
 
-      {/* Info-Badge */}
-      <div
-        className="inline-block mt-3 mb-4 rounded-full px-3 py-1 border cp-small"
-        style={{
-          borderColor: "var(--cp-line)",
-          color: "var(--cp-muted)",
-          background: "var(--cp-bg)",
-        }}
-      >
-        Verbunden über{" "}
-        <span
-          style={{ color: "var(--cp-primary)", fontWeight: 600 }}
-        >
-          /functions/chat
-        </span>
+      <div className="inline-block mt-3 mb-4 rounded-full px-3 py-1 border cp-small"
+           style={{ borderColor: "var(--cp-line)", color: "var(--cp-muted)", background: "var(--cp-bg)" }}>
+        Verbunden über <span style={{ color: "var(--cp-primary)", fontWeight: 600 }}>/functions/chat</span>
       </div>
 
-      {/* Chat-Fenster */}
-      <div
-        className="rounded-2xl border"
-        style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
-      >
-        {/* Nachrichtenbereich */}
+      <div className="rounded-2xl border" style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}>
         <div className="p-4 h-[56vh] overflow-y-auto">
           {messages.map((m, i) => (
-            <Bubble key={i} role={m.role}>
-              {m.text}
-            </Bubble>
+            <Bubble key={i} role={m.role}>{m.text}</Bubble>
           ))}
         </div>
 
-        {/* Eingabezeile */}
-        <form
-          onSubmit={send}
-          className="p-3 border-t flex gap-2 items-center"
-          style={{
-            borderColor: "var(--cp-line)",
-            background: "var(--cp-bg)",
-          }}
-        >
+        <form onSubmit={onSubmit} className="p-3 border-t flex gap-2 items-center"
+              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}>
           <input
             type="text"
             placeholder="Nachricht…"
@@ -123,11 +96,7 @@ export default function Chat() {
             onChange={(e) => setInput(e.target.value)}
             className="cp-input flex-1"
           />
-          <button
-            type="submit"
-            disabled={busy}
-            className="cp-btn"
-          >
+          <button type="submit" disabled={busy} className="cp-btn">
             {busy ? "Senden…" : "Senden"}
           </button>
         </form>
@@ -135,4 +104,3 @@ export default function Chat() {
     </AppShell>
   );
 }
-
