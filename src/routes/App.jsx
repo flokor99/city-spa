@@ -1,10 +1,24 @@
 import AppShell from "../components/AppShell.jsx";
 
 export default function App() {
-  const Card = ({ href, title, desc }) => (
-    <a href={href} className="cp-card block p-6">
-      <h2 className="text-xl font-semibold text-[var(--cp-primary)]">{title}</h2>
-      <p className="text-sm text-[var(--cp-muted)] mt-1">{desc}</p>
+  const Card = ({ href, title, desc, img }) => (
+    <a href={href} className="cp-card block p-5 hover:shadow-md transition">
+      <h2 className="text-xl font-semibold text-[var(--cp-primary)] mb-1x">
+        {title}
+      </h2>
+      <p className="text-sm text-[var(--cp-muted)] mb-3x">{desc}</p>
+      {img && (
+        <div
+          className="rounded-lg overflow-hidden border"
+          style={{ borderColor: "var(--cp-line)" }}
+        >
+          <img
+            src={img}
+            alt={`${title} Vorschau`}
+            className="w-full h-32 object-cover"
+          />
+        </div>
+      )}
     </a>
   );
 
@@ -30,21 +44,23 @@ export default function App() {
           <Card
             href="/chat"
             title="Chat"
-            desc="Stelle Fragen oder interagiere direkt mit dem City Profiler."
+            desc="Starte die Analyse für eine gewünschte Stadt und lass den Profiler den Output generieren. Der Agent steht anschließend für Rückfragen zur Verfügung."
+            img="/assets/preview-chat.png"
           />
           <Card
             href="/dokumente"
             title="Dokumente"
-            desc="Greife auf generierte PDF-Analysen und Stadtberichte zu."
+            desc="Hier findest du deine zuvor erstellten Dokumente und Outputs – inklusive Analysen, Stadtprofile und Handlungsempfehlungen."
+            img="/assets/preview-dokumente.png"
           />
           <Card
             href="/wissen"
             title="Wissen"
-            desc="Erhalte Hintergrundwissen zu Szenarien, Kriterien und Methodik."
+            desc="Alles zum Hintergrund der Städteszenarien, zur Methodik und den verwendeten Quellen."
+            img="/assets/preview-wissen.png"
           />
         </div>
       </main>
     </AppShell>
   );
 }
-
