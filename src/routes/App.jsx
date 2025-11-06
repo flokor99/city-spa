@@ -68,18 +68,27 @@ export default function App() {
             </p>
           </div>
 
-          {/* Schnellstart-Kachel (gleiche Breite wie Wissen-Kachel) */}
-          <form
+{/* Schnellstart-Kachel (kompakt, feste Eigenhöhe) */}
+<form
   onSubmit={startAnalysis}
-  className="cp-card p-5 flex flex-col justify-center"
-  style={{ height: "180px" }}   // <–– vorher: "100%"
+  className="cp-card p-5 flex flex-col gap-3"
+  style={{
+    alignSelf: "flex-start",
+    width: "100%",
+    maxWidth: "360px",   // gleiche Breite wie Wissen-Kachel
+  }}
 >
   <div
-    className="cp-small mb-2x"
-    style={{ color: "var(--cp-muted)", fontWeight: 600 }}
+    className="cp-small"
+    style={{
+      color: "var(--cp-muted)",
+      fontWeight: 600,
+      marginBottom: "4px",
+    }}
   >
     Schnellstart · Stadtanalyse
   </div>
+
   <div className="flex gap-2">
     <input
       className="cp-input flex-1"
