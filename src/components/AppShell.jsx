@@ -6,16 +6,15 @@ export default function AppShell({ title, children }) {
         background: "var(--cp-bg)",
         color: "var(--cp-ink)",
         fontFamily: "Inter, system-ui, sans-serif",
-        border: "6px solid var(--cp-orange)", // orange Outline wie im PDF
         boxSizing: "border-box",
       }}
     >
       {/* Header */}
       <header
         style={{
-          background: "var(--cp-navy)",      // dunkelblauer Balken
+          background: "var(--cp-navy)",      // Dunkelblauer Balken
           color: "#fff",
-          borderBottom: "4px solid var(--cp-orange)", // orange Linie unten
+          borderBottom: "4px solid var(--cp-orange)", // Orange Linie unten
         }}
       >
         <div
