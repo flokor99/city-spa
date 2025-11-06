@@ -47,7 +47,7 @@ export default function App() {
   );
 
   return (
-    <AppShell title="Chat">
+    <AppShell>
       <main className="max-w-5xl mx-auto p-6 space-y-10">
         {/* Oberer Bereich: Text links, Schnellstart rechts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
@@ -61,10 +61,10 @@ export default function App() {
               der kommunizierten Zielrichtung – und macht daraus konkreten
               Handlungsbedarf sichtbar. Zudem liefert er Ideen und bewertet deren
               Wirkung zur Zielerreichung.{" "}
-              <strong>
+            
                 So unterstützt er die Kommunikation mit der Stadt und trägt dazu bei,
                 Ströer als strategischen Partner zu positionieren.
-              </strong>
+      
             </p>
           </div>
 
