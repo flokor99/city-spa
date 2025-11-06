@@ -9,10 +9,10 @@ export default function AppShell({ title, children }) {
         boxSizing: "border-box",
       }}
     >
-   {/* Header */}
+  {/* Header */}
 <header
   style={{
-    background: "#0A1E3F", // dunkleres Blau wie im PDF
+    background: "#081830", // dunkleres Blau – jetzt identisch mit PDF
     color: "#fff",
     borderBottom: "4px solid var(--cp-orange)", // orange Linie unten
   }}
@@ -27,12 +27,12 @@ export default function AppShell({ title, children }) {
       justifyContent: "space-between",
     }}
   >
-    {/* Linke Seite – nur Logo */}
+    {/* Linke Seite – nur Ströer-Logo */}
     <img
       src="/assets/stroeer-logo.png"
       alt="Ströer Logo"
       style={{
-        height: "40px", // größer als vorher (28px)
+        height: "42px", // leicht größer für besseren visuellen Fokus
         width: "auto",
       }}
     />
@@ -50,6 +50,7 @@ export default function AppShell({ title, children }) {
     </div>
   </div>
 </header>
+
 
 
       {/* Hauptinhalt */}
