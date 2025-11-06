@@ -56,7 +56,7 @@ export default function App() {
             <h1 className="cp-h1 mb-2x">Willkommen</h1>
             <p className="cp-body">
               Der <strong>Ströer City Profiler</strong> ordnet Städte anhand von vier
-              Zukunftsszenarien ein, die in der Foresight Academy entstanden sind.
+              Zukunftsszenarien ein, welche im Rahmen der Foresight Academy entstanden sind.
               Er vergleicht die aktuelle Position und Entwicklung einer Stadt mit
               der kommunizierten Zielrichtung – und macht daraus konkreten
               Handlungsbedarf sichtbar. Zudem liefert er Ideen und bewertet deren
