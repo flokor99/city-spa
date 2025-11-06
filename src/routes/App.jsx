@@ -20,12 +20,9 @@ export default function App() {
         style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
       >
         <div className="px-6 py-7">
-          <h1 className="text-2xl font-bold text-[var(--cp-primary)] mb-2">
-            Willkommen
-          </h1>
-          <p className="text-[15px] leading-relaxed text-[var(--cp-ink)]">
-            Analyse · Dokumente · Wissen – im konsistenten City-Profiler-Look.
-          </p>
+         <h1 className="cp-h1 mb-2x">Willkommen</h1>
+<p className="cp-body mb-4x">Wähle einen Bereich aus, um fortzufahren:</p>
+
           <div
             className="mt-4"
             style={{ height: 2, background: "var(--cp-line)", width: 72 }}
