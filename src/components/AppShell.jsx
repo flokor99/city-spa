@@ -6,14 +6,16 @@ export default function AppShell({ title, children }) {
         background: "var(--cp-bg)",
         color: "var(--cp-ink)",
         fontFamily: "Inter, system-ui, sans-serif",
+        border: "6px solid var(--cp-orange)", // orange Outline wie im PDF
+        boxSizing: "border-box",
       }}
     >
       {/* Header */}
       <header
         style={{
-          background: "var(--cp-navy)",
+          background: "var(--cp-navy)",      // dunkelblauer Balken
           color: "#fff",
-          borderBottom: "4px solid var(--cp-orange)", // etwas kräftiger
+          borderBottom: "4px solid var(--cp-orange)", // orange Linie unten
         }}
       >
         <div
@@ -26,7 +28,7 @@ export default function AppShell({ title, children }) {
             justifyContent: "space-between",
           }}
         >
-          {/* Linke Seite – Titel */}
+          {/* Linke Seite – dynamischer Titel */}
           <h1
             style={{
               fontSize: 22,
@@ -40,7 +42,7 @@ export default function AppShell({ title, children }) {
             {title || "City Profiler"}
           </h1>
 
-          {/* Rechte Seite – Logo/Marke */}
+          {/* Rechte Seite – Branding */}
           <div
             style={{
               fontSize: 14,
@@ -54,7 +56,7 @@ export default function AppShell({ title, children }) {
         </div>
       </header>
 
-      {/* Content */}
+      {/* Hauptinhalt */}
       <main
         style={{
           maxWidth: 1120,
@@ -87,3 +89,4 @@ export default function AppShell({ title, children }) {
     </div>
   );
 }
+
