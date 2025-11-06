@@ -8,6 +8,9 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const statusMsg =
+    'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
+
   const getReplyText = (d) =>
     (typeof d?.reply === "string" && d.reply) ||
     d?.reply?.message ||
@@ -24,20 +27,46 @@ export default function Chat() {
     setBusy(true);
 
     try {
+      // optional: kleines client-Timeout, um Hänger elegant abzufangen
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 30000); // 30s
+
       const r = await fetch("/.netlify/functions/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: t }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
+
+      // 1) „Accepted“ / Long-running → zeige Status
+      if (r.status === 202) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        return;
+      }
+      // 2) Nicht-ok → Statusmeldung statt Fehler
+      if (!r.ok) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        return;
+      }
+
       const d = await r.json();
+
+      // Falls der Backend-Flow „Accepted“ als Feld zurückgibt
+      if (
+        d?.accepted === true ||
+        d?.status === "Accepted" ||
+        (typeof d?.reply === "string" && d.reply.toLowerCase() === "accepted")
+      ) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        return;
+      }
+
       const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
     } catch (err) {
-      console.error("Chat-Fehler:", err);
-      setMessages((m) => [
-        ...m,
-        { role: "system", text: "Fehler beim Senden." },
-      ]);
+      // 3) Netzwerk/Timeout/etc. → Statusmeldung statt Fehlermeldung
+      setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
     } finally {
       setBusy(false);
     }
@@ -66,32 +95,17 @@ export default function Chat() {
     const isUser = role === "user";
     const isSystem = role === "system";
     return (
-      <div
-        className={`w-full flex ${
-          isUser ? "justify-end" : "justify-start"
-        } my-2`}
-      >
+      <div className={`w-full flex ${isUser ? "justify-end" : "justify-start"} my-2`}>
         <div
           className="max-w-[72ch] rounded-2xl px-4 py-3 border"
           style={{
-            background: isUser
-              ? "rgba(0,174,239,0.10)"
-              : "var(--cp-bg)",
+            background: isUser ? "rgba(0,174,239,0.10)" : "var(--cp-bg)",
             borderColor: "var(--cp-line)",
-            color: isSystem
-              ? "var(--cp-muted)"
-              : "var(--cp-ink)",
+            color: isSystem ? "var(--cp-muted)" : "var(--cp-ink)",
           }}
         >
-          <div
-            className="cp-small mb-1x"
-            style={{ color: "var(--cp-muted)" }}
-          >
-            {isUser
-              ? "Du"
-              : isSystem
-              ? "System"
-              : "City Profiler"}
+          <div className="cp-small mb-1x" style={{ color: "var(--cp-muted)" }}>
+            {isUser ? "Du" : isSystem ? "System" : "City Profiler"}
           </div>
           <div className="cp-body">{children}</div>
         </div>
@@ -101,37 +115,19 @@ export default function Chat() {
 
   return (
     <AppShell title="Chat">
-      {/* Zurück-Link */}
-      <a href="/" className="cp-small cp-link">
-        ← Zurück
-      </a>
+      <a href="/" className="cp-small cp-link">← Zurück</a>
 
-      {/* Chatbereich */}
-      <div
-        className="rounded-2xl border mt-4"
-        style={{
-          borderColor: "var(--cp-line)",
-          background: "#F7F8FA",
-        }}
-      >
-        {/* Nachrichtenbereich */}
+      <div className="rounded-2xl border mt-4" style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}>
+        {/* Nachrichten */}
         <div className="p-4 h-[56vh] overflow-y-auto">
           {messages.map((m, i) => (
-            <Bubble key={i} role={m.role}>
-              {m.text}
-            </Bubble>
+            <Bubble key={i} role={m.role}>{m.text}</Bubble>
           ))}
         </div>
 
-        {/* Eingabezeile */}
-        <form
-          onSubmit={onSubmit}
-          className="p-3 border-t flex gap-2 items-center"
-          style={{
-            borderColor: "var(--cp-line)",
-            background: "var(--cp-bg)",
-          }}
-        >
+        {/* Eingabe */}
+        <form onSubmit={onSubmit} className="p-3 border-t flex gap-2 items-center"
+              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}>
           <input
             type="text"
             placeholder="Nachricht…"
