@@ -21,8 +21,8 @@ export default function App() {
           vergleicht die aktuelle Position und Entwicklung einer Stadt mit der
           kommunizierten Zielrichtung – und macht daraus konkreten Handlungsbedarf
           sichtbar. Zudem liefert er Ideen und bewertet deren Wirkung zur
-          Zielerreichung. <strong>So unterstützt er die Kommunikation mit der Stadt
-          und trägt dazu bei, Ströer als strategischen Partner zu positionieren.</strong>
+          Zielerreichung. So unterstützt er die Kommunikation mit der Stadt
+          und trägt dazu bei, Ströer als strategischen Partner zu positionieren.
         </p>
 
         {/* Kacheln */}
