@@ -59,7 +59,7 @@ export default function AppShell({ title, children }) {
   style={{
     position: "absolute",
     bottom: "-2px",
-    right: "205px",    // deutlich weiter links (vorher 110px)
+    right: "225px",    // deutlich weiter links (vorher 110px)
     height: "58px",    // etwas größer (vorher 48px)
     opacity: 0.9,      // leicht kräftiger
     zIndex: 1,
