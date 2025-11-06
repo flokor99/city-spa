@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root { height: 100%; }
 /* ==== City Profiler: Design Tokens (ohne npm) ==== */
 :root {
   /* Farben aus dem PDF-Stil */
@@ -12,11 +11,10 @@ html, body, #root { height: 100%; }
   --cp-muted:   #777777; /* Meta/Quelle */
   --cp-line:    #E5E5E5; /* Linien/Rahmen */
   --cp-bg:      #FFFFFF; /* Hintergrund */
-  :root {
-  /* ... deine bisherigen Variablen ... */
-  --cp-navy:   #0D2240; /* dunkles Blau wie im PDF-Header */
-  --cp-orange: #F26522; /* orange Akzentlinie im PDF */
-}
+
+  /* Neue Corporate-Farben für Header */
+  --cp-navy:   #0D2240; /* Dunkelblau (Header-Hintergrund) */
+  --cp-orange: #F26522; /* Orange (Akzentlinie) */
 }
 
 /* Basis-Setup */
@@ -33,6 +31,6 @@ body {
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
 }
 
-/* (Optional) sehr dezente Hilfsklassen – sofort nutzbar im Markup */
+/* (Optional) dezente Hilfsklassen – sofort nutzbar im Markup */
 .cp-muted { color: var(--cp-muted); }
 .cp-line  { border-color: var(--cp-line); }
