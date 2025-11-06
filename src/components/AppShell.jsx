@@ -9,51 +9,56 @@ export default function AppShell({ title, children }) {
         boxSizing: "border-box",
       }}
     >
-      {/* Header */}
-      <header
+     {/* Header */}
+<header
+  style={{
+    background: "var(--cp-navy)", // Dunkelblau
+    color: "#fff",
+    borderBottom: "4px solid var(--cp-orange)", // Orange Linie unten
+  }}
+>
+  <div
+    style={{
+      maxWidth: 1120,
+      margin: "0 auto",
+      padding: "14px 24px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+    }}
+  >
+    {/* Linke Seite – Logo + Text */}
+    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+      <img
+        src="/assets/stroeer-logo.png"
+        alt="Ströer Logo"
+        style={{ height: "28px", width: "auto" }}
+      />
+      <div
         style={{
-          background: "var(--cp-navy)",      // Dunkelblauer Balken
+          fontSize: 18,
+          fontWeight: 600,
+          letterSpacing: ".2px",
           color: "#fff",
-          borderBottom: "4px solid var(--cp-orange)", // Orange Linie unten
         }}
       >
-        <div
-          style={{
-            maxWidth: 1120,
-            margin: "0 auto",
-            padding: "14px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          {/* Linke Seite – dynamischer Titel */}
-          <h1
-            style={{
-              fontSize: 22,
-              fontWeight: 700,
-              margin: 0,
-              color: "#fff",
-              letterSpacing: ".3px",
-              textTransform: "uppercase",
-            }}
-          >
-            {title || "City Profiler"}
-          </h1>
+        City Profiler
+      </div>
+    </div>
 
-          {/* Rechte Seite – Branding */}
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.85)",
-              letterSpacing: ".2px",
-            }}
-          >
-            City Profiler
-          </div>
-        </div>
-      </header>
+    {/* Rechte Seite – optionaler Titel */}
+    <div
+      style={{
+        fontSize: 14,
+        fontWeight: 600,
+        color: "rgba(255,255,255,0.85)",
+        letterSpacing: ".2px",
+      }}
+    >
+      {title || "City Profiler"}
+    </div>
+  </div>
+</header>
 
       {/* Hauptinhalt */}
       <main
