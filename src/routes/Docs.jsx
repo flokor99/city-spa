@@ -2,29 +2,34 @@ import { useState, useMemo } from "react";
 import AppShell from "../components/AppShell.jsx";
 
 export default function Docs() {
-  // Beispiel-Daten – später einfach ersetzen oder erweitern
+  // Dokumentenliste – neueste zuerst
   const items = useMemo(
     () => [
+      {
+        id: "hamburg-profiler",
+        titel: "City Profiler – Hamburg",
+        stadt: "Hamburg",
+        datum: "2025",
+        url: "/docs/Cityprofiler_Hamburg.pdf", // <-- dein PDF
+      },
       {
         id: "hh-szenario",
         titel: "Szenario 2 – Vorlage",
         stadt: "Hamburg",
         datum: "2025",
-        url: "/Szenario2_Vorlage.pdf", // liegt im public-Ordner
+        url: "/Szenario2_Vorlage.pdf",
       },
-      // Weitere Dokumente hier ergänzen
     ],
     []
   );
 
+  // Das erste Dokument in der Liste wird automatisch vorausgewählt
   const [active, setActive] = useState(items[0] || null);
 
   return (
     <AppShell title="Dokumente">
       {/* Zurück-Link */}
-      <a href="/" className="cp-small cp-link">
-        ← Zurück
-      </a>
+      <a href="/" className="cp-small cp-link">← Zurück</a>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
         {/* Sidebar – Liste der Dokumente */}
@@ -127,4 +132,3 @@ export default function Docs() {
     </AppShell>
   );
 }
-
