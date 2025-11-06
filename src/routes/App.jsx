@@ -30,17 +30,17 @@ export default function App() {
           <Card
             href="/chat"
             title="Chat"
-            desc="Starte die Analyse für eine gewünschte Stadt und lass den Profiler den Output generieren. Der Agent steht anschließend für Rückfragen zur Verfügung."
+            desc="Stelle Fragen oder interagiere direkt mit dem City Profiler."
           />
           <Card
             href="/dokumente"
             title="Dokumente"
-            desc="Hier findest du deine zuvor erstellten Dokumente und Outputs – inklusive Analysen, Stadtprofile und Handlungsempfehlungen."
+            desc="Greife auf generierte PDF-Analysen und Stadtberichte zu."
           />
           <Card
             href="/wissen"
             title="Wissen"
-            desc="Alles zum Hintergrund der Städteszenarien, zur Methodik und den verwendeten Quellen."
+            desc="Erhalte Hintergrundwissen zu Szenarien, Kriterien und Methodik."
           />
         </div>
       </main>
