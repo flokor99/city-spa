@@ -51,20 +51,21 @@ export default function AppShell({ title, children }) {
     </div>
   </div>
 
-  {/* Skyline – rechts versetzt */}
-  <img
-    src="/assets/skyline.png"
-    alt=""
-    aria-hidden="true"
-    style={{
-      position: "absolute",
-      bottom: "-2px",      // leicht unter der Linie
-      right: "40px",       // nach rechts versetzt
-      height: "48px",
-      opacity: 0.85,
-      zIndex: 1,
-    }}
-  />
+  {/* Skyline – rechts versetzt, optisch ausbalanciert */}
+<img
+  src="/assets/skyline.png"
+  alt=""
+  aria-hidden="true"
+  style={{
+    position: "absolute",
+    bottom: "-2px",
+    right: "110px",   // vorher 40px → jetzt weiter links für optische Balance
+    height: "48px",
+    opacity: 0.85,
+    zIndex: 1,
+  }}
+/>
+
 </header>
 
 
