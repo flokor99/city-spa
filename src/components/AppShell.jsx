@@ -9,12 +9,14 @@ export default function AppShell({ title, children }) {
         boxSizing: "border-box",
       }}
     >
-  {/* Header */}
+ {/* Header */}
 <header
   style={{
-    background: "#081830", // dunkleres Blau – jetzt identisch mit PDF
+    position: "relative",
+    background: "#081830", // dunkles PDF-Blau
     color: "#fff",
-    borderBottom: "4px solid var(--cp-orange)", // orange Linie unten
+    borderBottom: "4px solid var(--cp-orange)",
+    overflow: "hidden",
   }}
 >
   <div
@@ -25,19 +27,18 @@ export default function AppShell({ title, children }) {
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
+      position: "relative",
+      zIndex: 2, // über Skyline
     }}
   >
-    {/* Linke Seite – nur Ströer-Logo */}
+    {/* Linke Seite – Logo */}
     <img
       src="/assets/stroeer-logo.png"
       alt="Ströer Logo"
-      style={{
-        height: "42px", // leicht größer für besseren visuellen Fokus
-        width: "auto",
-      }}
+      style={{ height: "42px", width: "auto" }}
     />
 
-    {/* Rechte Seite – dynamischer Titel */}
+    {/* Rechte Seite – Seitentitel */}
     <div
       style={{
         fontSize: 14,
@@ -49,6 +50,21 @@ export default function AppShell({ title, children }) {
       {title || "City Profiler"}
     </div>
   </div>
+
+  {/* Skyline – rechts versetzt */}
+  <img
+    src="/assets/skyline.png"
+    alt=""
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      bottom: "-2px",      // leicht unter der Linie
+      right: "40px",       // nach rechts versetzt
+      height: "48px",
+      opacity: 0.85,
+      zIndex: 1,
+    }}
+  />
 </header>
 
 
