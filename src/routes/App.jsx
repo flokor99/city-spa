@@ -45,7 +45,7 @@ const Card = ({ href, title, desc, img }) => (
         {/* Einleitungstext */}
         <p className="cp-body mb-5x">
           Der <strong>Ströer City Profiler</strong> ordnet Städte anhand von vier
-          Zukunftsszenarien ein, die in der Foresight Academy entstanden sind. Er
+          Zukunftsszenarien ein, welche im Rahmen der Foresight Academy entstanden sind. Er
           vergleicht die aktuelle Position und Entwicklung einer Stadt mit der
           kommunizierten Zielrichtung – und macht daraus konkreten Handlungsbedarf
           sichtbar. Zudem liefert er Ideen und bewertet deren Wirkung zur
