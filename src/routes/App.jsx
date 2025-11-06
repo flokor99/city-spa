@@ -1,31 +1,40 @@
 import AppShell from "../components/AppShell.jsx";
 
 export default function App() {
-  const Card = ({ href, title, desc, img }) => (
-    <a href={href} className="cp-card block p-5 hover:shadow-md transition">
+const Card = ({ href, title, desc, img }) => (
+  <a
+    href={href}
+    className="cp-card block p-5 hover:shadow-md transition flex flex-col justify-between h-full"
+  >
+    <div>
       <h2 className="text-xl font-semibold text-[var(--cp-primary)] mb-1x">
         {title}
       </h2>
       <p className="text-sm text-[var(--cp-muted)] mb-3x">{desc}</p>
-      {img && (
-        <div
-          className="rounded-lg overflow-hidden border"
-          style={{ borderColor: "var(--cp-line)" }}
-        >
-     <div
-  className="w-full h-36 flex items-center justify-center overflow-hidden bg-[#F7F8FA]"
->
-  <img
-    src={img}
-    alt={`${title} Vorschau`}
-    className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-[1.03]"
-  />
-</div>
+    </div>
 
-        </div>
-      )}
-    </a>
-  );
+    {img && (
+      <div
+        className="rounded-lg overflow-hidden border mt-auto"
+        style={{
+          borderColor: "var(--cp-line)",
+          background: "#F7F8FA",
+          height: "144px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <img
+          src={img}
+          alt={`${title} Vorschau`}
+          className="object-contain w-full h-full"
+        />
+      </div>
+    )}
+  </a>
+);
+
 
   return (
     <AppShell title="City Profiler">
