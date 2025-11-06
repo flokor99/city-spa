@@ -3,12 +3,11 @@ import AppShell from "../components/AppShell.jsx";
 
 export default function Chat() {
   const [messages, setMessages] = useState([
-    { role: "system", text: "Verbunden über /functions/chat" },
+    { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Hilfsfunktion: liest den richtigen Antworttext aus dem JSON
   const getReplyText = (d) =>
     (typeof d?.reply === "string" && d.reply) ||
     d?.reply?.message ||
@@ -30,7 +29,6 @@ export default function Chat() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message: t }),
       });
-
       const d = await r.json();
       const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
@@ -60,7 +58,7 @@ export default function Chat() {
       sendText(
         `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`
       );
-      window.history.replaceState({}, "", "/chat"); // Query-Param entfernen
+      window.history.replaceState({}, "", "/chat");
     }
   }, []);
 
@@ -103,31 +101,14 @@ export default function Chat() {
 
   return (
     <AppShell title="Chat">
+      {/* Zurück-Link */}
       <a href="/" className="cp-small cp-link">
         ← Zurück
       </a>
 
+      {/* Chatbereich */}
       <div
-        className="inline-block mt-3 mb-4 rounded-full px-3 py-1 border cp-small"
-        style={{
-          borderColor: "var(--cp-line)",
-          color: "var(--cp-muted)",
-          background: "var(--cp-bg)",
-        }}
-      >
-        Verbunden über{" "}
-        <span
-          style={{
-            color: "var(--cp-primary)",
-            fontWeight: 600,
-          }}
-        >
-          /functions/chat
-        </span>
-      </div>
-
-      <div
-        className="rounded-2xl border"
+        className="rounded-2xl border mt-4"
         style={{
           borderColor: "var(--cp-line)",
           background: "#F7F8FA",
