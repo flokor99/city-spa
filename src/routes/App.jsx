@@ -70,28 +70,29 @@ export default function App() {
 
           {/* Schnellstart-Kachel (gleiche Breite wie Wissen-Kachel) */}
           <form
-            onSubmit={startAnalysis}
-            className="cp-card p-5 flex flex-col justify-center"
-            style={{ height: "100%" }}
-          >
-            <div
-              className="cp-small mb-2x"
-              style={{ color: "var(--cp-muted)", fontWeight: 600 }}
-            >
-              Schnellstart · Stadtanalyse
-            </div>
-            <div className="flex gap-2">
-              <input
-                className="cp-input flex-1"
-                placeholder="Stadt eingeben…"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-              />
-              <button className="cp-btn" type="submit">
-                Start
-              </button>
-            </div>
-          </form>
+  onSubmit={startAnalysis}
+  className="cp-card p-5 flex flex-col justify-center"
+  style={{ height: "180px" }}   // <–– vorher: "100%"
+>
+  <div
+    className="cp-small mb-2x"
+    style={{ color: "var(--cp-muted)", fontWeight: 600 }}
+  >
+    Schnellstart · Stadtanalyse
+  </div>
+  <div className="flex gap-2">
+    <input
+      className="cp-input flex-1"
+      placeholder="Stadt eingeben…"
+      value={city}
+      onChange={(e) => setCity(e.target.value)}
+    />
+    <button className="cp-btn" type="submit">
+      Start
+    </button>
+  </div>
+</form>
+
         </div>
 
         {/* Drei Hauptkacheln */}
