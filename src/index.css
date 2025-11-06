@@ -12,6 +12,11 @@ html, body, #root { height: 100%; }
   --cp-muted:   #777777; /* Meta/Quelle */
   --cp-line:    #E5E5E5; /* Linien/Rahmen */
   --cp-bg:      #FFFFFF; /* Hintergrund */
+  :root {
+  /* ... deine bisherigen Variablen ... */
+  --cp-navy:   #0D2240; /* dunkles Blau wie im PDF-Header */
+  --cp-orange: #F26522; /* orange Akzentlinie im PDF */
+}
 }
 
 /* Basis-Setup */
