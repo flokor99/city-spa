@@ -12,11 +12,16 @@ export default function App() {
           className="rounded-lg overflow-hidden border"
           style={{ borderColor: "var(--cp-line)" }}
         >
-          <img
-            src={img}
-            alt={`${title} Vorschau`}
-            className="w-full h-32 object-cover"
-          />
+     <div
+  className="w-full h-36 flex items-center justify-center overflow-hidden bg-[#F7F8FA]"
+>
+  <img
+    src={img}
+    alt={`${title} Vorschau`}
+    className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-[1.03]"
+  />
+</div>
+
         </div>
       )}
     </a>
