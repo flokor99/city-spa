@@ -51,7 +51,7 @@ export default function AppShell({ title, children }) {
     </div>
   </div>
 
-  {/* Skyline – rechts versetzt, optisch ausbalanciert */}
+ {/* Skyline – rechts positioniert, optisch ausbalanciert */}
 <img
   src="/assets/skyline.png"
   alt=""
@@ -59,9 +59,9 @@ export default function AppShell({ title, children }) {
   style={{
     position: "absolute",
     bottom: "-2px",
-    right: "110px",   // vorher 40px → jetzt weiter links für optische Balance
-    height: "48px",
-    opacity: 0.85,
+    right: "180px",    // deutlich weiter links (vorher 110px)
+    height: "58px",    // etwas größer (vorher 48px)
+    opacity: 0.9,      // leicht kräftiger
     zIndex: 1,
   }}
 />
