@@ -1,65 +1,123 @@
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
+import AppShell from "../components/AppShell.jsx";
 
 export default function Docs() {
-  const [items, setItems] = useState([]);
-  const [active, setActive] = useState(null);
+  // Beispiel-Daten (du kannst/ sollst das später durch echte Daten ersetzen)
+  const items = useMemo(() => ([
+    {
+      id: "hh-szenario",
+      titel: "Szenario 2 – Vorlage",
+      stadt: "Hamburg",
+      datum: "2025",
+      // Liegt bei dir bereits im public-Ordner
+      url: "/Szenario2_Vorlage.pdf"
+    }
+    // Weitere Einträge hier …
+  ]), []);
 
-  useEffect(() => {
-    fetch("/.netlify/functions/inbox")
-      .then(r => r.json())
-      .then(d => setItems(d.items || []))
-      .catch(() => setItems([]));
-  }, []);
+  const [active, setActive] = useState(items[0] || null);
 
   return (
-    <div className="h-screen grid grid-cols-1 md:grid-cols-3">
-      <aside className="border-r bg-white p-4">
-        <a href="/" className="text-sm block mb-4">← Zurück</a>
-        <button
-  onClick={() => setActive({ url: "/Szenario2_Vorlage.pdf" })}
-  className="underline text-blue-600 mb-3 block text-left"
->
-  Szenario 2 – Vorlage (anzeigen)
-</button>
-<h2 className="font-semibold mb-3">Dokumente</h2>
+    <AppShell title="Dokumente">
+      {/* Zurück */}
+      <a href="/" className="text-sm" style={{ color: "var(--cp-muted)" }}>
+        ← Zurück
+      </a>
 
-<a
-  href="/Szenario2_Vorlage.pdf"
-  target="_blank"
-  rel="noreferrer"
-  className="block mb-3 text-blue-600 underline"
->
-  Szenario 2 – Vorlage (PDF öffnen)
-</a>
-<button
-  onClick={() => setActive({ url: "/Szenario2_Vorlage.pdf" })}
-  className="underline text-blue-600 mb-3 block text-left"
->
-  Szenario 2 – Vorlage (anzeigen)
-</button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+        {/* Sidebar */}
+        <aside
+          className="rounded-2xl border p-4"
+          style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
+        >
+          <h2 className="text-base font-semibold text-[var(--cp-primary)] mb-3">Dokumente</h2>
 
-        <ul className="space-y-2">
-          {items.map(it => (
-            <li key={it.id}>
-              <button onClick={()=>setActive(it)} className="w-full text-left border rounded-xl p-3 hover:bg-gray-50">
-                <div className="font-medium">{it.titel}</div>
-                <div className="text-xs text-gray-600">{it.stadt} · {it.datum}</div>
-              </button>
-            </li>
-          ))}
-          {items.length === 0 && <li className="text-sm text-gray-500">Noch keine Dokumente.</li>}
-        </ul>
-      </aside>
-      <main className="md:col-span-2 p-4">
-        {!active ? (
-          <div className="h-full border rounded-xl flex items-center justify-center bg-gray-50">
-            Kein Dokument ausgewählt
+          <ul className="space-y-2">
+            {items.map((it) => {
+              const selected = active && active.id === it.id;
+              return (
+                <li key={it.id}>
+                  <button
+                    onClick={() => setActive(it)}
+                    className="w-full text-left rounded-xl border px-3 py-3 transition"
+                    style={{
+                      borderColor: "var(--cp-line)",
+                      background: selected ? "rgba(28,117,188,0.06)" : "var(--cp-bg)"
+                    }}
+                  >
+                    <div
+                      className="font-medium truncate"
+                      style={{ color: selected ? "var(--cp-primary)" : "var(--cp-ink)" }}
+                    >
+                      {it.titel}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: "var(--cp-muted)" }}>
+                      {it.stadt} · {it.datum}
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+            {items.length === 0 && (
+              <li className="text-sm" style={{ color: "var(--cp-muted)" }}>
+                Noch keine Dokumente.
+              </li>
+            )}
+          </ul>
+        </aside>
+
+        {/* Viewer */}
+        <main className="md:col-span-2">
+          <div
+            className="rounded-2xl border overflow-hidden"
+            style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
+          >
+            {/* Toolbar */}
+            <div
+              className="flex items-center justify-between px-3 py-2 border-b"
+              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
+            >
+              <div className="text-sm font-medium" style={{ color: "var(--cp-ink)" }}>
+                {active ? active.titel : "Kein Dokument ausgewählt"}
+              </div>
+              {active && (
+                <div className="flex items-center gap-2">
+                  <a
+                    href={active.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-semibold px-3 py-1 rounded-lg"
+                    style={{
+                      color: "white",
+                      background: "var(--cp-primary)"
+                    }}
+                  >
+                    In neuem Tab öffnen
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* PDF-Frame */}
+            <div style={{ height: "72vh", background: "#F7F8FA" }}>
+              {active ? (
+                <iframe
+                  title="PDF"
+                  src={active.url}
+                  className="w-full h-full"
+                  style={{ border: "0" }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-sm" style={{ color: "var(--cp-muted)" }}>
+                    Kein Dokument ausgewählt
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          <iframe title="PDF" src={active.url || "about:blank"} className="w-full h-full border rounded-xl" />
-        )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </AppShell>
   );
 }
-
