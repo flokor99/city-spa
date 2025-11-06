@@ -9,12 +9,12 @@ export default function AppShell({ title, children }) {
         boxSizing: "border-box",
       }}
     >
-     {/* Header */}
+   {/* Header */}
 <header
   style={{
-    background: "var(--cp-navy)", // Dunkelblau
+    background: "#0A1E3F", // dunkleres Blau wie im PDF
     color: "#fff",
-    borderBottom: "4px solid var(--cp-orange)", // Orange Linie unten
+    borderBottom: "4px solid var(--cp-orange)", // orange Linie unten
   }}
 >
   <div
@@ -27,26 +27,17 @@ export default function AppShell({ title, children }) {
       justifyContent: "space-between",
     }}
   >
-    {/* Linke Seite – Logo + Text */}
-    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-      <img
-        src="/assets/stroeer-logo.png"
-        alt="Ströer Logo"
-        style={{ height: "28px", width: "auto" }}
-      />
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 600,
-          letterSpacing: ".2px",
-          color: "#fff",
-        }}
-      >
-        City Profiler
-      </div>
-    </div>
+    {/* Linke Seite – nur Logo */}
+    <img
+      src="/assets/stroeer-logo.png"
+      alt="Ströer Logo"
+      style={{
+        height: "40px", // größer als vorher (28px)
+        width: "auto",
+      }}
+    />
 
-    {/* Rechte Seite – optionaler Titel */}
+    {/* Rechte Seite – dynamischer Titel */}
     <div
       style={{
         fontSize: 14,
@@ -59,6 +50,7 @@ export default function AppShell({ title, children }) {
     </div>
   </div>
 </header>
+
 
       {/* Hauptinhalt */}
       <main
