@@ -1,12 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import AppShell from "../components/AppShell.jsx";
 
-// ← falls du Repo/Branch mal änderst, hier zentral anpassen:
 const GITHUB_DOCS_API =
   "https://api.github.com/repos/flokor99/city-spa/contents/public/docs?ref=main";
 
+// erzeugt den Aufruf an die Netlify Function
+const toViewUrl = (rawUrl) =>
+  rawUrl?.startsWith("/")
+    ? rawUrl
+    : `/.netlify/functions/pdf?url=${encodeURIComponent(rawUrl)}`;
+
 export default function Docs() {
-  // dein Fallback bleibt
   const fallbackItems = useMemo(
     () => [
       {
@@ -30,18 +34,12 @@ export default function Docs() {
   const [items, setItems] = useState(fallbackItems);
   const [active, setActive] = useState(fallbackItems[0] || null);
 
-  // kleine Hilfsfunktion: Dateiname -> hübscher Titel
   const filenameToTitle = (name) =>
-    name
-      .replace(/\.pdf$/i, "")
-      .replace(/_/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
+    name.replace(/\.pdf$/i, "").replace(/_/g, " ").replace(/\s{2,}/g, " ").trim();
 
   useEffect(() => {
     let cancelled = false;
 
-    // 1) Versuch: GitHub Contents API (zeigt neue PDFs sofort)
     (async () => {
       try {
         const r = await fetch(GITHUB_DOCS_API, {
@@ -58,33 +56,17 @@ export default function Docs() {
             id: f.sha,
             titel: filenameToTitle(f.name),
             stadt: filenameToTitle(f.name),
-            datum: "", // falls du später ein Datum brauchst, hier erweitern
-            url: f.download_url, // direkte RAW-URL (korrekt fürs <iframe>)
+            datum: "",
+            url: f.download_url, // bleibt GitHub-URL
           }))
-          // einfache Sortierung: alphabetisch nach Titel
           .sort((a, b) => a.titel.localeCompare(b.titel));
 
         if (!cancelled && pdfs.length > 0) {
           setItems(pdfs);
           setActive(pdfs[0]);
-          return; // fertig, nicht weiter zu index.json
         }
       } catch {
-        // still try index.json
-      }
-
-      // 2) Versuch: deine bisherige index.json (falls vorhanden)
-      try {
-        const r = await fetch("/docs/index.json", { cache: "no-store" });
-        if (!r.ok) throw new Error("no index.json");
-        const arr = await r.json();
-        if (!cancelled && Array.isArray(arr) && arr.length > 0) {
-          setItems(arr);
-          setActive(arr[0]);
-          return;
-        }
-      } catch {
-        // 3) Fallback: bleibt deine feste Liste
+        // fallback
       }
     })();
 
@@ -123,17 +105,12 @@ export default function Docs() {
                   >
                     <div className="font-medium truncate">{it.titel}</div>
                     <div className="cp-small mt-1x" style={{ color: "var(--cp-muted)" }}>
-                      {it.stadt}{it.datum ? ` · ${it.datum}` : ""}
+                      {it.stadt}
                     </div>
                   </button>
                 </li>
               );
             })}
-            {items.length === 0 && (
-              <li className="cp-small" style={{ color: "var(--cp-muted)" }}>
-                Noch keine Dokumente.
-              </li>
-            )}
           </ul>
         </aside>
 
@@ -152,7 +129,7 @@ export default function Docs() {
               </div>
               {active && (
                 <a
-                  href={active.url}
+                  href={toViewUrl(active.url)}
                   target="_blank"
                   rel="noreferrer"
                   className="cp-btn text-sm"
@@ -167,9 +144,10 @@ export default function Docs() {
               {active ? (
                 <iframe
                   title="PDF"
-                  src={active.url}
+                  src={toViewUrl(active.url)}
                   className="w-full h-full"
                   style={{ border: 0 }}
+                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
