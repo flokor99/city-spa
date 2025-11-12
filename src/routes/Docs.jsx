@@ -1,11 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import AppShell from "../components/AppShell.jsx";
 
-// ← falls du Repo/Branch mal änderst, hier zentral anpassen:
-const GITHUB_DOCS_API =
-  "https://api.github.com/repos/flokor99/city-spa/contents/public/docs?ref=main";
-
 export default function Docs() {
+  // Deine bisherige feste Liste als Fallback
   const fallbackItems = useMemo(
     () => [
       {
@@ -28,101 +25,25 @@ export default function Docs() {
 
   const [items, setItems] = useState(fallbackItems);
   const [active, setActive] = useState(fallbackItems[0] || null);
-  const [previewUrl, setPreviewUrl] = useState(null);
-  const [loadingPdf, setLoadingPdf] = useState(false);
-
-  const filenameToTitle = (name) =>
-    name
-      .replace(/\.pdf$/i, "")
-      .replace(/_/g, " ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
 
   useEffect(() => {
     let cancelled = false;
-
-    (async () => {
-      try {
-        const r = await fetch(GITHUB_DOCS_API, {
-          headers: { Accept: "application/vnd.github.v3+json" },
-          cache: "no-store",
-        });
-        if (!r.ok) throw new Error(`GitHub API ${r.status}`);
-        const data = await r.json();
-        if (!Array.isArray(data)) throw new Error("No array");
-
-        const pdfs = data
-          .filter((f) => f.type === "file" && /\.pdf$/i.test(f.name))
-          .map((f) => ({
-            id: f.sha,
-            titel: filenameToTitle(f.name),
-            stadt: filenameToTitle(f.name),
-            datum: "",
-            url: f.download_url,
-          }))
-          .sort((a, b) => a.titel.localeCompare(b.titel));
-
-        if (!cancelled && pdfs.length > 0) {
-          setItems(pdfs);
-          setActive(pdfs[0]);
-          return;
-        }
-      } catch {
-        // still try index.json
-      }
-
-      try {
-        const r = await fetch("/docs/index.json", { cache: "no-store" });
-        if (!r.ok) throw new Error("no index.json");
-        const arr = await r.json();
-        if (!cancelled && Array.isArray(arr) && arr.length > 0) {
+    fetch("/docs/index.json", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((arr) => {
+        if (cancelled) return;
+        if (Array.isArray(arr) && arr.length > 0) {
           setItems(arr);
           setActive(arr[0]);
-          return;
         }
-      } catch {
-        // fallback bleibt
-      }
-    })();
-
+      })
+      .catch(() => {
+        /* still use fallbackItems */
+      });
     return () => {
       cancelled = true;
     };
   }, []);
-
-  // ---- PDF Vorschau als Blob laden, um Autodownload zu verhindern ----
-  useEffect(() => {
-    let objectUrl = null;
-    const ctrl = new AbortController();
-
-    async function loadPdf() {
-      setPreviewUrl(null);
-      if (!active?.url) return;
-      setLoadingPdf(true);
-      try {
-        const r = await fetch(active.url, {
-          headers: { Accept: "application/pdf" },
-          cache: "no-store",
-          signal: ctrl.signal,
-        });
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const blob = await r.blob();
-        objectUrl = URL.createObjectURL(blob);
-        setPreviewUrl(objectUrl);
-      } catch (e) {
-        console.error("PDF preview failed:", e);
-      } finally {
-        setLoadingPdf(false);
-      }
-    }
-
-    loadPdf();
-
-    return () => {
-      ctrl.abort();
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [active]);
 
   return (
     <AppShell title="Dokumente">
@@ -154,7 +75,7 @@ export default function Docs() {
                   >
                     <div className="font-medium truncate">{it.titel}</div>
                     <div className="cp-small mt-1x" style={{ color: "var(--cp-muted)" }}>
-                      {it.stadt}{it.datum ? ` · ${it.datum}` : ""}
+                      {it.stadt} · {it.datum}
                     </div>
                   </button>
                 </li>
@@ -183,7 +104,7 @@ export default function Docs() {
               </div>
               {active && (
                 <a
-                  href={previewUrl || active.url}
+                  href={active.url}
                   target="_blank"
                   rel="noreferrer"
                   className="cp-btn text-sm"
@@ -196,20 +117,7 @@ export default function Docs() {
 
             <div style={{ height: "72vh", background: "#F7F8FA" }}>
               {active ? (
-                previewUrl ? (
-                  <iframe
-                    title="PDF"
-                    src={previewUrl}
-                    className="w-full h-full"
-                    style={{ border: 0 }}
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
-                      {loadingPdf ? "PDF wird geladen…" : "Vorschau nicht verfügbar"}
-                    </div>
-                  </div>
-                )
+                <iframe title="PDF" src={active.url} className="w-full h-full" style={{ border: 0 }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
