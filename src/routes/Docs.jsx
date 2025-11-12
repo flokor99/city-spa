@@ -6,7 +6,6 @@ const GITHUB_DOCS_API =
   "https://api.github.com/repos/flokor99/city-spa/contents/public/docs?ref=main";
 
 export default function Docs() {
-  // dein Fallback bleibt
   const fallbackItems = useMemo(
     () => [
       {
@@ -29,8 +28,9 @@ export default function Docs() {
 
   const [items, setItems] = useState(fallbackItems);
   const [active, setActive] = useState(fallbackItems[0] || null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
 
-  // kleine Hilfsfunktion: Dateiname -> hübscher Titel
   const filenameToTitle = (name) =>
     name
       .replace(/\.pdf$/i, "")
@@ -41,7 +41,6 @@ export default function Docs() {
   useEffect(() => {
     let cancelled = false;
 
-    // 1) Versuch: GitHub Contents API (zeigt neue PDFs sofort)
     (async () => {
       try {
         const r = await fetch(GITHUB_DOCS_API, {
@@ -58,22 +57,20 @@ export default function Docs() {
             id: f.sha,
             titel: filenameToTitle(f.name),
             stadt: filenameToTitle(f.name),
-            datum: "", // falls du später ein Datum brauchst, hier erweitern
-            url: f.download_url, // direkte RAW-URL (korrekt fürs <iframe>)
+            datum: "",
+            url: f.download_url,
           }))
-          // einfache Sortierung: alphabetisch nach Titel
           .sort((a, b) => a.titel.localeCompare(b.titel));
 
         if (!cancelled && pdfs.length > 0) {
           setItems(pdfs);
           setActive(pdfs[0]);
-          return; // fertig, nicht weiter zu index.json
+          return;
         }
       } catch {
         // still try index.json
       }
 
-      // 2) Versuch: deine bisherige index.json (falls vorhanden)
       try {
         const r = await fetch("/docs/index.json", { cache: "no-store" });
         if (!r.ok) throw new Error("no index.json");
@@ -84,7 +81,7 @@ export default function Docs() {
           return;
         }
       } catch {
-        // 3) Fallback: bleibt deine feste Liste
+        // fallback bleibt
       }
     })();
 
@@ -92,6 +89,40 @@ export default function Docs() {
       cancelled = true;
     };
   }, []);
+
+  // ---- PDF Vorschau als Blob laden, um Autodownload zu verhindern ----
+  useEffect(() => {
+    let objectUrl = null;
+    const ctrl = new AbortController();
+
+    async function loadPdf() {
+      setPreviewUrl(null);
+      if (!active?.url) return;
+      setLoadingPdf(true);
+      try {
+        const r = await fetch(active.url, {
+          headers: { Accept: "application/pdf" },
+          cache: "no-store",
+          signal: ctrl.signal,
+        });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const blob = await r.blob();
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      } catch (e) {
+        console.error("PDF preview failed:", e);
+      } finally {
+        setLoadingPdf(false);
+      }
+    }
+
+    loadPdf();
+
+    return () => {
+      ctrl.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [active]);
 
   return (
     <AppShell title="Dokumente">
@@ -152,7 +183,7 @@ export default function Docs() {
               </div>
               {active && (
                 <a
-                  href={active.url}
+                  href={previewUrl || active.url}
                   target="_blank"
                   rel="noreferrer"
                   className="cp-btn text-sm"
@@ -165,12 +196,20 @@ export default function Docs() {
 
             <div style={{ height: "72vh", background: "#F7F8FA" }}>
               {active ? (
-                <iframe
-                  title="PDF"
-                  src={active.url}
-                  className="w-full h-full"
-                  style={{ border: 0 }}
-                />
+                previewUrl ? (
+                  <iframe
+                    title="PDF"
+                    src={previewUrl}
+                    className="w-full h-full"
+                    style={{ border: 0 }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
+                      {loadingPdf ? "PDF wird geladen…" : "Vorschau nicht verfügbar"}
+                    </div>
+                  </div>
+                )
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
