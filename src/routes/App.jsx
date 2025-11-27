@@ -1,10 +1,20 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../components/AppShell.jsx";
+import Login from "../pages/Login.jsx";
 
 export default function App() {
   const navigate = useNavigate();
   const [city, setCity] = useState("");
+
+  // Login Check
+  const isLoggedIn =
+    typeof document !== "undefined" &&
+    document.cookie.includes("session=valid");
+
+  if (!isLoggedIn) {
+    return <Login />;
+  }
 
   const startAnalysis = (e) => {
     e.preventDefault();
@@ -61,47 +71,44 @@ export default function App() {
               der kommunizierten Zielrichtung – und macht daraus konkreten
               Handlungsbedarf sichtbar. Zudem liefert er Ideen und bewertet deren
               Wirkung zur Zielerreichung.{" "}
-            
-                So unterstützt er die Kommunikation mit der Stadt und trägt dazu bei,
-                Ströer als strategischen Partner zu positionieren.
-      
+              So unterstützt er die Kommunikation mit der Stadt und trägt dazu bei,
+              Ströer als strategischen Partner zu positionieren.
             </p>
           </div>
 
-{/* Schnellstart-Kachel (kompakt, feste Eigenhöhe) */}
-<form
-  onSubmit={startAnalysis}
-  className="cp-card p-5 flex flex-col gap-3"
-  style={{
-    alignSelf: "flex-start",
-    width: "100%",
-    maxWidth: "360px",   // gleiche Breite wie Wissen-Kachel
-  }}
->
-  <div
-    className="cp-small"
-    style={{
-      color: "var(--cp-muted)",
-      fontWeight: 600,
-      marginBottom: "4px",
-    }}
-  >
-    Schnellstart · Stadtanalyse
-  </div>
+          {/* Schnellstart-Kachel */}
+          <form
+            onSubmit={startAnalysis}
+            className="cp-card p-5 flex flex-col gap-3"
+            style={{
+              alignSelf: "flex-start",
+              width: "100%",
+              maxWidth: "360px",
+            }}
+          >
+            <div
+              className="cp-small"
+              style={{
+                color: "var(--cp-muted)",
+                fontWeight: 600,
+                marginBottom: "4px",
+              }}
+            >
+              Schnellstart · Stadtanalyse
+            </div>
 
-  <div className="flex gap-2">
-    <input
-      className="cp-input flex-1"
-      placeholder="Stadt eingeben…"
-      value={city}
-      onChange={(e) => setCity(e.target.value)}
-    />
-    <button className="cp-btn" type="submit">
-      Start
-    </button>
-  </div>
-</form>
-
+            <div className="flex gap-2">
+              <input
+                className="cp-input flex-1"
+                placeholder="Stadt eingeben…"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              />
+              <button className="cp-btn" type="submit">
+                Start
+              </button>
+            </div>
+          </form>
         </div>
 
         {/* Drei Hauptkacheln */}
