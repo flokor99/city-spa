@@ -104,7 +104,6 @@ export default function AppShell({ title, children }) {
             color: "var(--cp-muted)",
           }}
         >
-          Quelle: OECD Regional Well-Being (2025)
         </div>
       </footer>
     </div>
