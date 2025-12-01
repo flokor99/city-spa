@@ -39,43 +39,41 @@ export default function AppShell({ title, children }) {
           />
 
           {/* Rechte Seite – Titel + Skyline im selben Container */}
-          <div
-            style={{
-              position: "relative",
-              fontSize: 14,
-              fontWeight: 600,
-              color: "rgba(255,255,255,0.85)",
-              letterSpacing: ".2px",
-              textAlign: "right",
-              paddingRight: "120px", // Platz für die Skyline
-              flexShrink: 0,
-            }}
-          >
-            {/* Titel selbst */}
-            <span
-              style={{
-                position: "relative",
-                zIndex: 2,
-              }}
-            >
-              {title || "City Profiler"}
-            </span>
+        <div
+  style={{
+    position: "relative",
+    fontSize: 14,
+    fontWeight: 600,
+    color: "rgba(255,255,255,0.85)",
+    letterSpacing: ".2px",
+    textAlign: "right",
+    paddingRight: "96px",   // Platz für Skyline + kleinen Abstand
+    flexShrink: 0,
+  }}
+>
+  <span
+    style={{
+      position: "relative",
+      zIndex: 2,
+    }}
+  >
+    {title || "City Profiler"}
+  </span>
 
-            {/* Skyline, jetzt an den Titel-Container gebunden */}
-            <img
-              src="/assets/skyline.png"
-              alt=""
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                right: 0,
-                bottom: "-2px",
-                height: "58px",
-                opacity: 0.9,
-                zIndex: 1,
-              }}
-            />
-          </div>
+  <img
+    src="/assets/skyline.png"
+    alt=""
+    aria-hidden="true"
+    style={{
+      position: "absolute",
+      right: "96px",   // Skyline endet leicht links vom Text "Dokumente"
+      bottom: "-4px",  // untere Kante genau am orangenen Strich
+      height: "58px",
+      opacity: 0.9,
+      zIndex: 1,
+    }}
+  />
+</div>
         </div>
       </header>
 
