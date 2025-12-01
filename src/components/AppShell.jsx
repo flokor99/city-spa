@@ -66,7 +66,7 @@ export default function AppShell({ title, children }) {
     aria-hidden="true"
     style={{
       position: "absolute",
-      right: "96px",   // Skyline endet leicht links vom Text "Dokumente"
+      right: "120px",   // Skyline endet leicht links vom Text "Dokumente"
       bottom: "-4px",  // untere Kante genau am orangenen Strich
       height: "58px",
       opacity: 0.9,
