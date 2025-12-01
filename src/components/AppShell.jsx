@@ -47,7 +47,7 @@ export default function AppShell({ title, children }) {
     color: "rgba(255,255,255,0.85)",
     letterSpacing: ".2px",
     textAlign: "right",
-    paddingRight: "96px",   // Platz für Skyline + kleinen Abstand
+    paddingRight: "70px",   // Platz für Skyline + kleinen Abstand
     flexShrink: 0,
   }}
 >
