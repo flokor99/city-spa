@@ -9,66 +9,75 @@ export default function AppShell({ title, children }) {
         boxSizing: "border-box",
       }}
     >
- {/* Header */}
-<header
-  style={{
-    position: "relative",
-    background: "#081830", // dunkles PDF-Blau
-    color: "#fff",
-    borderBottom: "4px solid var(--cp-orange)",
-    overflow: "hidden",
-  }}
->
-  <div
-    style={{
-      maxWidth: 1120,
-      margin: "0 auto",
-      padding: "14px 24px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      position: "relative",
-      zIndex: 2, // über Skyline
-    }}
-  >
-    {/* Linke Seite – Logo */}
-    <img
-      src="/assets/stroeer-logo.png"
-      alt="Ströer Logo"
-      style={{ height: "42px", width: "auto" }}
-    />
+      {/* Header */}
+      <header
+        style={{
+          position: "relative",
+          background: "#081830", // dunkles PDF-Blau
+          color: "#fff",
+          borderBottom: "4px solid var(--cp-orange)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 1120,
+            margin: "0 auto",
+            padding: "14px 24px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "relative",
+            zIndex: 2,
+          }}
+        >
+          {/* Linke Seite – Logo */}
+          <img
+            src="/assets/stroeer-logo.png"
+            alt="Ströer Logo"
+            style={{ height: "42px", width: "auto" }}
+          />
 
-    {/* Rechte Seite – Seitentitel */}
-    <div
-      style={{
-        fontSize: 14,
-        fontWeight: 600,
-        color: "rgba(255,255,255,0.85)",
-        letterSpacing: ".2px",
-      }}
-    >
-      {title || "City Profiler"}
-    </div>
-  </div>
+          {/* Rechte Seite – Titel + Skyline im selben Container */}
+          <div
+            style={{
+              position: "relative",
+              fontSize: 14,
+              fontWeight: 600,
+              color: "rgba(255,255,255,0.85)",
+              letterSpacing: ".2px",
+              textAlign: "right",
+              paddingRight: "120px", // Platz für die Skyline
+              flexShrink: 0,
+            }}
+          >
+            {/* Titel selbst */}
+            <span
+              style={{
+                position: "relative",
+                zIndex: 2,
+              }}
+            >
+              {title || "City Profiler"}
+            </span>
 
- {/* Skyline – rechts positioniert, optisch ausbalanciert */}
-<img
-  src="/assets/skyline.png"
-  alt=""
-  aria-hidden="true"
-  style={{
-    position: "absolute",
-    bottom: "-2px",
-    right: "245px",    // deutlich weiter links (vorher 110px)
-    height: "58px",    // etwas größer (vorher 48px)
-    opacity: 0.9,      // leicht kräftiger
-    zIndex: 1,
-  }}
-/>
-
-</header>
-
-
+            {/* Skyline, jetzt an den Titel-Container gebunden */}
+            <img
+              src="/assets/skyline.png"
+              alt=""
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: "-2px",
+                height: "58px",
+                opacity: 0.9,
+                zIndex: 1,
+              }}
+            />
+          </div>
+        </div>
+      </header>
 
       {/* Hauptinhalt */}
       <main
@@ -103,4 +112,3 @@ export default function AppShell({ title, children }) {
     </div>
   );
 }
-
