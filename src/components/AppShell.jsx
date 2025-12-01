@@ -67,7 +67,7 @@ export default function AppShell({ title, children }) {
     style={{
       position: "absolute",
       right: "215px",   // Skyline endet leicht links vom Text "Dokumente"
-      bottom: "-10px",  // untere Kante genau am orangenen Strich
+      bottom: "-18px",  // untere Kante genau am orangenen Strich
       height: "58px",
       opacity: 0.9,
       zIndex: 1,
