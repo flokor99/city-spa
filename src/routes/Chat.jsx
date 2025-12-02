@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { fetchCities } from "../supabaseData";
 import { useAuth } from "../AuthContext.jsx";
+import {
+  fetchConversations,
+  createConversation,
+  fetchMessages,
+  addMessage,
+} from "../supabaseData";
 
 export default function Chat() {
   const [messages, setMessages] = useState([
