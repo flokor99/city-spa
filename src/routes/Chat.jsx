@@ -95,6 +95,18 @@ const { user } = useAuth(); // später wichtig
       window.history.replaceState({}, "", "/chat");
     }
   }, []);
+  useEffect(() => {
+  async function loadCities() {
+    const { data, error } = await fetchCities();
+    if (!error && data) {
+      setCities(data);
+      // optional: erste Stadt vorauswählen
+      if (data.length > 0) setSelectedCity(data[0].id);
+    }
+  }
+  loadCities();
+}, []);
+
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -148,3 +160,21 @@ const { user } = useAuth(); // später wichtig
     </AppShell>
   );
 }
+<a href="/" className="cp-small cp-link">← Zurück</a>
+
+{/* Stadt wählen */}
+<div className="mt-4">
+  <label className="cp-small">Stadt auswählen:</label>
+  <select
+    value={selectedCity || ""}
+    onChange={(e) => setSelectedCity(Number(e.target.value))}
+    className="cp-input"
+    style={{ maxWidth: 250 }}
+  >
+    {cities.map((c) => (
+      <option key={c.id} value={c.id}>
+        {c.name}
+      </option>
+    ))}
+  </select>
+</div>
