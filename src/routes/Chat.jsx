@@ -1,15 +1,17 @@
 import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { fetchCities } from "../supabaseData";
-import { useAuth } from "../AuthContext"; // brauchen wir gleich
+import { useAuth } from "../AuthContext.jsx";
 
 export default function Chat() {
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
+
   const [cities, setCities] = useState([]);
-const [selectedCity, setSelectedCity] = useState(null);
-const { user } = useAuth(); // später wichtig
+  const [selectedCity, setSelectedCity] = useState(""); // String, weil uuid
+  const { user } = useAuth(); // brauchen wir gleich für Conversations
+
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -32,9 +34,8 @@ const { user } = useAuth(); // später wichtig
     setBusy(true);
 
     try {
-      // optional: kleines client-Timeout, um Hänger elegant abzufangen
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 30000); // 30s
+      const timer = setTimeout(() => controller.abort(), 30000);
 
       const r = await fetch("/.netlify/functions/chat", {
         method: "POST",
@@ -44,12 +45,11 @@ const { user } = useAuth(); // später wichtig
       });
       clearTimeout(timer);
 
-      // 1) „Accepted“ / Long-running → zeige Status
       if (r.status === 202) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
       }
-      // 2) Nicht-ok → Statusmeldung statt Fehler
+
       if (!r.ok) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
@@ -57,7 +57,6 @@ const { user } = useAuth(); // später wichtig
 
       const d = await r.json();
 
-      // Falls der Backend-Flow „Accepted“ als Feld zurückgibt
       if (
         d?.accepted === true ||
         d?.status === "Accepted" ||
@@ -70,7 +69,6 @@ const { user } = useAuth(); // später wichtig
       const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
     } catch (err) {
-      // 3) Netzwerk/Timeout/etc. → Statusmeldung statt Fehlermeldung
       setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
     } finally {
       setBusy(false);
@@ -95,24 +93,28 @@ const { user } = useAuth(); // später wichtig
       window.history.replaceState({}, "", "/chat");
     }
   }, []);
-  useEffect(() => {
-  async function loadCities() {
-    const { data, error } = await fetchCities();
-    if (!error && data) {
-      setCities(data);
-      // optional: erste Stadt vorauswählen
-      if (data.length > 0) setSelectedCity(data[0].id);
-    }
-  }
-  loadCities();
-}, []);
 
+  // Städte laden
+  useEffect(() => {
+    async function loadCities() {
+      const { data, error } = await fetchCities();
+      if (!error && data) {
+        setCities(data);
+        if (data.length > 0) setSelectedCity(data[0].id);
+      }
+    }
+    loadCities();
+  }, []);
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
     const isSystem = role === "system";
     return (
-      <div className={`w-full flex ${isUser ? "justify-end" : "justify-start"} my-2`}>
+      <div
+        className={`w-full flex ${
+          isUser ? "justify-end" : "justify-start"
+        } my-2`}
+      >
         <div
           className="max-w-[72ch] rounded-2xl px-4 py-3 border"
           style={{
@@ -121,7 +123,10 @@ const { user } = useAuth(); // später wichtig
             color: isSystem ? "var(--cp-muted)" : "var(--cp-ink)",
           }}
         >
-          <div className="cp-small mb-1x" style={{ color: "var(--cp-muted)" }}>
+          <div
+            className="cp-small mb-1x"
+            style={{ color: "var(--cp-muted)" }}
+          >
             {isUser ? "Du" : isSystem ? "System" : "City Profiler"}
           </div>
           <div className="cp-body">{children}</div>
@@ -132,19 +137,46 @@ const { user } = useAuth(); // später wichtig
 
   return (
     <AppShell title="Chat">
-      <a href="/" className="cp-small cp-link">← Zurück</a>
+      <a href="/" className="cp-small cp-link">
+        ← Zurück
+      </a>
 
-      <div className="rounded-2xl border mt-4" style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}>
+      {/* Stadt wählen */}
+      <div className="mt-4 mb-4">
+        <label className="cp-small">Stadt auswählen:</label>
+        <select
+          value={selectedCity}
+          onChange={(e) => setSelectedCity(e.target.value)}
+          className="cp-input"
+          style={{ maxWidth: 250 }}
+        >
+          {cities.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div
+        className="rounded-2xl border"
+        style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
+      >
         {/* Nachrichten */}
         <div className="p-4 h-[56vh] overflow-y-auto">
           {messages.map((m, i) => (
-            <Bubble key={i} role={m.role}>{m.text}</Bubble>
+            <Bubble key={i} role={m.role}>
+              {m.text}
+            </Bubble>
           ))}
         </div>
 
         {/* Eingabe */}
-        <form onSubmit={onSubmit} className="p-3 border-t flex gap-2 items-center"
-              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}>
+        <form
+          onSubmit={onSubmit}
+          className="p-3 border-t flex gap-2 items-center"
+          style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
+        >
           <input
             type="text"
             placeholder="Nachricht…"
@@ -160,21 +192,3 @@ const { user } = useAuth(); // später wichtig
     </AppShell>
   );
 }
-<a href="/" className="cp-small cp-link">← Zurück</a>
-
-{/* Stadt wählen */}
-<div className="mt-4">
-  <label className="cp-small">Stadt auswählen:</label>
-  <select
-    value={selectedCity || ""}
-    onChange={(e) => setSelectedCity(Number(e.target.value))}
-    className="cp-input"
-    style={{ maxWidth: 250 }}
-  >
-    {cities.map((c) => (
-      <option key={c.id} value={c.id}>
-        {c.name}
-      </option>
-    ))}
-  </select>
-</div>
