@@ -13,11 +13,10 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
 
-  // Wenn schon eingeloggt -> direkt weiterleiten (z.B. zum Chat)
-  if (!loading && user) {
-    navigate("/chat", { replace: true });
-    return null;
+  if (loading) {
+    return <div style={{ padding: "2rem" }}>Prüfe Login Status…</div>;
   }
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
