@@ -14,8 +14,10 @@ const router = createBrowserRouter([
   { path: "/", element: <App /> },
   { path: "/chat", element: <Chat /> },
   { path: "/dokumente", element: <Docs /> },
-  { path: "/wissen", element: <Wissen /> }
+  { path: "/wissen", element: <Wissen /> },
+  { path: "/auth-test", element: <AuthTest /> }  // neu
 ]);
+
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
