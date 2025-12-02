@@ -2,10 +2,13 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
+
 import App from "./routes/App.jsx";
 import Chat from "./routes/Chat.jsx";
 import Docs from "./routes/Docs.jsx";
 import Wissen from "./routes/Wissen.jsx";
+
+import { AuthProvider } from "./AuthContext.jsx";  // ⬅️ Neu
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
@@ -16,6 +19,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <AuthProvider>               {/* ⬅️ Neu */}
+      <RouterProvider router={router} />
+    </AuthProvider>
   </React.StrictMode>
 );
