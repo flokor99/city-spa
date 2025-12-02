@@ -14,15 +14,12 @@ import { AuthProvider } from "./AuthContext.jsx";
 import ProtectedRoute from "./ProtectedRoute.jsx"; // NEU
 
 const router = createBrowserRouter([
-  { path: "/", element: <App /> },
+  // Root zeigt direkt auf unseren neuen Login
+  { path: "/", element: <Login /> },
 
-  // öffentlicher Login
   { path: "/login", element: <Login /> },
-
-  // Testseite (kannst du später löschen)
   { path: "/auth-test", element: <AuthTest /> },
 
-  // geschützte Routen
   {
     path: "/chat",
     element: (
@@ -48,6 +45,7 @@ const router = createBrowserRouter([
     )
   }
 ]);
+
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
