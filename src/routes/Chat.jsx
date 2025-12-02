@@ -22,6 +22,12 @@ export default function Chat() {
 
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+    // Hilfsfunktion: Namen der aktuell gewählten Stadt finden
+  const getSelectedCityName = () => {
+    const cityObj = cities.find((c) => c.id === selectedCity);
+    return cityObj ? cityObj.name : null;
+  };
+
 
   const statusMsg =
     'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
@@ -34,7 +40,7 @@ export default function Chat() {
     d?.text ||
     "…";
 
-  const sendText = async (text) => {
+   const sendText = async (text) => {
     const t = text.trim();
     if (!t || busy) return;
 
@@ -42,8 +48,8 @@ export default function Chat() {
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
-    // in DB speichern, falls Conversation existiert
-    if (conversationId) {
+    // User-Nachricht in DB speichern, falls Conversation schon existiert
+    if (conversationId && user) {
       await addMessage({
         conversationId,
         userId: user.id,
@@ -56,10 +62,27 @@ export default function Chat() {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 30000);
 
+      const cityName = getSelectedCityName();
+
+      // Payload für Netlify Function
+      const payload = {
+        message: t,
+      };
+
+      if (user?.email) {
+        payload.userEmail = user.email;
+      }
+      if (cityName) {
+        payload.city = cityName;
+      }
+      if (conversationId) {
+        payload.conversationId = conversationId;
+      }
+
       const r = await fetch("/.netlify/functions/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: t }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       });
       clearTimeout(timer);
@@ -89,7 +112,7 @@ export default function Chat() {
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
 
       // Antwort in DB speichern
-      if (conversationId) {
+      if (conversationId && user) {
         await addMessage({
           conversationId,
           userId: user.id,
@@ -103,6 +126,7 @@ export default function Chat() {
       setBusy(false);
     }
   };
+
 
   const onSubmit = (e) => {
     e.preventDefault();
