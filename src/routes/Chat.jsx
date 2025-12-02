@@ -20,6 +20,8 @@ export default function Chat() {
 
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+const [conversationId, setConversationId] = useState(null);
+const [loadingConversation, setLoadingConversation] = useState(true);
 
   const statusMsg =
     'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
