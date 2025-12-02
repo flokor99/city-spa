@@ -1,8 +1,8 @@
 [
   {
-    "path": "docs/hamburg-report.pdf",
-    "title": "Hamburg Analyse",
-    "city_slug": "hamburg",
+    "path": "docs/Berlin.pdf",
+    "title": "Berlin",
+    "city_slug": "Berlin",
     "owner_email": "fkorte@stroeer.de",
-    "created_at": "2025-12-02T10:00:00Z"
+    "created_at": ""
   }]
