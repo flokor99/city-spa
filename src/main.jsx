@@ -7,26 +7,37 @@ import App from "./routes/App.jsx";
 import Chat from "./routes/Chat.jsx";
 import Docs from "./routes/Docs.jsx";
 import Wissen from "./routes/Wissen.jsx";
-import AuthTest from "./routes/AuthTest.jsx";      // Testseite lassen wir vorerst drin
-import Login from "./routes/Login.jsx";           // NEU
+import Login from "./routes/Login.jsx";
+import AuthTest from "./routes/AuthTest.jsx"; // kannst du später löschen
 
 import { AuthProvider } from "./AuthContext.jsx";
-import ProtectedRoute from "./ProtectedRoute.jsx"; // NEU
+import ProtectedRoute from "./ProtectedRoute.jsx";
 
 const router = createBrowserRouter([
-  // Root zeigt direkt auf unseren neuen Login
-  { path: "/", element: <Login /> },
+  // Mainseite: App, aber geschützt
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
+  },
 
+  // Öffentliche Login-Seite
   { path: "/login", element: <Login /> },
+
+  // Testseite (optional)
   { path: "/auth-test", element: <AuthTest /> },
 
+  // geschützte Unterseiten
   {
     path: "/chat",
     element: (
       <ProtectedRoute>
         <Chat />
       </ProtectedRoute>
-    )
+    ),
   },
   {
     path: "/dokumente",
@@ -34,7 +45,7 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <Docs />
       </ProtectedRoute>
-    )
+    ),
   },
   {
     path: "/wissen",
@@ -42,10 +53,9 @@ const router = createBrowserRouter([
       <ProtectedRoute>
         <Wissen />
       </ProtectedRoute>
-    )
-  }
+    ),
+  },
 ]);
-
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
