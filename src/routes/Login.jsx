@@ -13,10 +13,16 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState("");
 
+  // Solange Auth Zustand noch lädt
   if (loading) {
     return <div style={{ padding: "2rem" }}>Prüfe Login Status…</div>;
   }
 
+  // Wenn User schon eingeloggt ist → direkt zur Mainseite
+  if (user) {
+    navigate("/", { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,14 +34,11 @@ export default function Login() {
       return;
     }
 
-    // Falls ein "from" in state gesetzt ist, dahin zurück
-    const from = location.state?.from?.pathname || "/chat";
+    // Falls ein "from" in state gesetzt ist (z.B. /chat), dahin zurück
+    // sonst Standard: Mainseite "/"
+    const from = location.state?.from?.pathname || "/";
     navigate(from, { replace: true });
   };
-
-  if (loading) {
-    return <div style={{ padding: "2rem" }}>Prüfe Login Status…</div>;
-  }
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
