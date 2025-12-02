@@ -16,28 +16,50 @@ export default function Docs() {
   useEffect(() => {
     async function loadDocs() {
       try {
-        const res = await fetch("/docs/index.json");
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        const list = Array.isArray(data) ? data : [];
+        // 1. Supabase URL für die documents Tabelle
+const url = `${SUPABASE_URL}/rest/v1/documents?select=*`;
 
-        // Benutzerbezogene Filterung
-        // Email Vergleich in lowercase, falls jemand Groß-/Kleinschreibung anders eintippt
-        const myDocs = list.filter(
-          (doc) =>
-            doc.owner_email &&
-            user?.email &&
-            doc.owner_email.toLowerCase() === user.email.toLowerCase()
-        );
+// 2. Request an Supabase senden
+const res = await fetch(url, {
+  headers: {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  },
+});
 
-        setDocs(myDocs);
-        if (myDocs.length > 0) {
-          setSelectedDoc(myDocs[0]);
-        } else {
-          setSelectedDoc(null);
-        }
+if (!res.ok) {
+  throw new Error(`HTTP ${res.status}`);
+}
+
+const rows = await res.json();
+
+// 3. Rows in das bisherige Format umwandeln,
+//    damit der Rest der Komponente NICHT geändert werden muss
+const list = Array.isArray(rows)
+  ? rows.map((row) => ({
+      path: row.pdf_path,          // so wie früher doc.path
+      title: row.title,
+      city_slug: row.city,         // ersetzt dein city_slug Feld
+      created_at: row.created_at?.slice(0, 10), // Datum etwas gekürzt
+      owner_email: row.owner_email,
+    }))
+  : [];
+
+// 4. Benutzerbezogene Filterung wie vorher
+const myDocs = list.filter(
+  (doc) =>
+    doc.owner_email &&
+    user?.email &&
+    doc.owner_email.toLowerCase() === user.email.toLowerCase()
+);
+
+setDocs(myDocs);
+if (myDocs.length > 0) {
+  setSelectedDoc(myDocs[0]);
+} else {
+  setSelectedDoc(null);
+}
+
       } catch (err) {
         console.error("Fehler beim Laden der Dokumente", err);
         setError("Dokumentenliste konnte nicht geladen werden.");
