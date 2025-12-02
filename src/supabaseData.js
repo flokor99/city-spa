@@ -2,7 +2,7 @@
 import { supabase } from "./supabaseClient";
 
 /**
- * Alle Städte laden (für Dropdown etc.)
+ * Alle Städte laden
  */
 export async function fetchCities() {
   const { data, error } = await supabase
@@ -14,7 +14,8 @@ export async function fetchCities() {
 }
 
 /**
- * Alle Conversations des Users laden (optional gefiltert nach city_id)
+ * Alle Conversations des Users laden
+ * optional gefiltert nach city_id
  */
 export async function fetchConversations(userId, cityId = null) {
   let query = supabase
@@ -64,7 +65,7 @@ export async function fetchMessages(conversationId) {
 }
 
 /**
- * Neue Nachricht speichern (user oder assistant)
+ * Neue Nachricht speichern
  */
 export async function addMessage({
   conversationId,
