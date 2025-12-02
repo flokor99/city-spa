@@ -1,20 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../components/AppShell.jsx";
-import Login from "../pages/Login.jsx";
 
 export default function App() {
   const navigate = useNavigate();
   const [city, setCity] = useState("");
-
-  // Login Check
-  const isLoggedIn =
-    typeof document !== "undefined" &&
-    document.cookie.includes("session=valid");
-
-  if (!isLoggedIn) {
-    return <Login />;
-  }
 
   const startAnalysis = (e) => {
     e.preventDefault();
