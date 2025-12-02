@@ -1,164 +1,88 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useState } from "react";
 import AppShell from "../components/AppShell.jsx";
 
-const GITHUB_DOCS_API =
-  "https://api.github.com/repos/flokor99/city-spa/contents/public/docs?ref=main";
-
-// erzeugt den Aufruf an die Netlify Function
-const toViewUrl = (rawUrl) =>
-  rawUrl?.startsWith("/")
-    ? rawUrl
-    : `/.netlify/functions/pdf?url=${encodeURIComponent(rawUrl)}`;
-
 export default function Docs() {
-  const fallbackItems = useMemo(
-    () => [
-      {
-        id: "hamburg-profiler",
-        titel: "City Profiler – Hamburg",
-        stadt: "Hamburg",
-        datum: "2025",
-        url: "/docs/Cityprofiler_Hamburg.pdf",
-      },
-      {
-        id: "hh-szenario",
-        titel: "Szenario 2 – Vorlage",
-        stadt: "Hamburg",
-        datum: "2025",
-        url: "/Szenario2_Vorlage.pdf",
-      },
-    ],
-    []
-  );
-
-  const [items, setItems] = useState(fallbackItems);
-  const [active, setActive] = useState(fallbackItems[0] || null);
-
-  const filenameToTitle = (name) =>
-    name.replace(/\.pdf$/i, "").replace(/_/g, " ").replace(/\s{2,}/g, " ").trim();
+  const [docs, setDocs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
+    async function loadDocs() {
       try {
-        const r = await fetch(GITHUB_DOCS_API, {
-          headers: { Accept: "application/vnd.github.v3+json" },
-          cache: "no-store",
-        });
-        if (!r.ok) throw new Error(`GitHub API ${r.status}`);
-        const data = await r.json();
-        if (!Array.isArray(data)) throw new Error("No array");
-
-        const pdfs = data
-          .filter((f) => f.type === "file" && /\.pdf$/i.test(f.name))
-          .map((f) => ({
-            id: f.sha,
-            titel: filenameToTitle(f.name),
-            stadt: filenameToTitle(f.name),
-            datum: "",
-            url: f.download_url, // bleibt GitHub-URL
-          }))
-          .sort((a, b) => a.titel.localeCompare(b.titel));
-
-        if (!cancelled && pdfs.length > 0) {
-          setItems(pdfs);
-          setActive(pdfs[0]);
+        const res = await fetch("/docs/index.json");
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
         }
-      } catch {
-        // fallback
+        const data = await res.json();
+        // Safety: falls jemand kein Array reinschreibt
+        setDocs(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Fehler beim Laden der Dokumente", err);
+        setError("Dokumentenliste konnte nicht geladen werden.");
+      } finally {
+        setLoading(false);
       }
-    })();
+    }
 
-    return () => {
-      cancelled = true;
-    };
+    loadDocs();
   }, []);
 
   return (
     <AppShell title="Dokumente">
-      <a href="/" className="cp-small cp-link">← Zurück</a>
+      <a href="/" className="cp-small cp-link">
+        ← Zurück
+      </a>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-        {/* Sidebar */}
-        <aside
-          className="rounded-2xl border p-4"
-          style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
-        >
-          <h2 className="cp-h2 mb-2x">Dokumente</h2>
+      <div className="mt-4">
+        {loading && <div>Lade Dokumente…</div>}
 
-          <ul className="space-y-2">
-            {items.map((it) => {
-              const selected = active && active.id === it.id;
-              return (
-                <li key={it.id}>
-                  <button
-                    onClick={() => setActive(it)}
-                    className="w-full text-left rounded-xl px-3 py-3 transition"
-                    style={{
-                      border: "1px solid var(--cp-line)",
-                      background: selected
-                        ? "rgba(28,117,188,0.06)"
-                        : "var(--cp-bg)",
-                      color: selected ? "var(--cp-primary)" : "var(--cp-ink)",
-                    }}
-                  >
-                    <div className="font-medium truncate">{it.titel}</div>
-                    <div className="cp-small mt-1x" style={{ color: "var(--cp-muted)" }}>
-                      {it.stadt}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </aside>
-
-        {/* Viewer */}
-        <main className="md:col-span-2">
+        {error && (
           <div
-            className="rounded-2xl border overflow-hidden"
-            style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
+            style={{
+              padding: "0.75rem 1rem",
+              borderRadius: "0.75rem",
+              background: "#FFE5E5",
+              color: "#8A1F1F",
+              marginBottom: "1rem",
+            }}
           >
-            <div
-              className="flex items-center justify-between px-3 py-2 border-b"
-              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
-            >
-              <div className="cp-body" style={{ fontWeight: 600, color: "var(--cp-ink)" }}>
-                {active ? active.titel : "Kein Dokument ausgewählt"}
-              </div>
-              {active && (
-                <a
-                  href={toViewUrl(active.url)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="cp-btn text-sm"
-                  style={{ padding: "6px 12px" }}
-                >
-                  In neuem Tab öffnen
-                </a>
-              )}
-            </div>
+            {error}
+          </div>
+        )}
 
-            <div style={{ height: "72vh", background: "#F7F8FA" }}>
-              {active ? (
-                <iframe
-                  title="PDF"
-                  src={toViewUrl(active.url)}
-                  className="w-full h-full"
-                  style={{ border: 0 }}
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
+        {!loading && !error && docs.length === 0 && (
+          <div>Es sind derzeit keine Dokumente vorhanden.</div>
+        )}
+
+        {!loading && !error && docs.length > 0 && (
+          <div className="space-y-3">
+            {docs.map((doc, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border p-3 flex items-center justify-between"
+                style={{ borderColor: "var(--cp-line)" }}
+              >
+                <div>
+                  <div className="cp-body">
+                    {doc.title || doc.path || "Unbenanntes Dokument"}
+                  </div>
                   <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
-                    Kein Dokument ausgewählt
+                    {doc.city_slug ? `Stadt: ${doc.city_slug}` : null}
+                    {doc.created_at ? ` · ${doc.created_at}` : null}
                   </div>
                 </div>
-              )}
-            </div>
+                <a
+                  href={`/${doc.path}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="cp-btn"
+                >
+                  Öffnen
+                </a>
+              </div>
+            ))}
           </div>
-        </main>
+        )}
       </div>
     </AppShell>
   );
