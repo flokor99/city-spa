@@ -1,10 +1,15 @@
 import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
+import { fetchCities } from "../supabaseData";
+import { useAuth } from "../AuthContext"; // brauchen wir gleich
 
 export default function Chat() {
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
+  const [cities, setCities] = useState([]);
+const [selectedCity, setSelectedCity] = useState(null);
+const { user } = useAuth(); // später wichtig
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
