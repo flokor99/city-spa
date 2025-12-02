@@ -2,7 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
-
+import AuthTest from "./routes/AuthTest.jsx";
 import App from "./routes/App.jsx";
 import Chat from "./routes/Chat.jsx";
 import Docs from "./routes/Docs.jsx";
