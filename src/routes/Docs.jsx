@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import AppShell from "../components/AppShell.jsx";
+import { useAuth } from "../AuthContext.jsx";
 
 export default function Docs() {
+  const { user } = useAuth();
+
   const [docs, setDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -16,9 +19,21 @@ export default function Docs() {
         }
         const data = await res.json();
         const list = Array.isArray(data) ? data : [];
-        setDocs(list);
-        if (list.length > 0) {
-          setSelectedDoc(list[0]);
+
+        // Benutzerbezogene Filterung
+        // Email Vergleich in lowercase, falls jemand Groß-/Kleinschreibung anders eintippt
+        const myDocs = list.filter(
+          (doc) =>
+            doc.owner_email &&
+            user?.email &&
+            doc.owner_email.toLowerCase() === user.email.toLowerCase()
+        );
+
+        setDocs(myDocs);
+        if (myDocs.length > 0) {
+          setSelectedDoc(myDocs[0]);
+        } else {
+          setSelectedDoc(null);
         }
       } catch (err) {
         console.error("Fehler beim Laden der Dokumente", err);
@@ -29,7 +44,7 @@ export default function Docs() {
     }
 
     loadDocs();
-  }, []);
+  }, [user]);
 
   const handleSelect = (doc) => {
     setSelectedDoc(doc);
@@ -41,9 +56,7 @@ export default function Docs() {
         ← Zurück
       </a>
 
-      {loading && (
-        <div className="mt-4">Lade Dokumente…</div>
-      )}
+      {loading && <div className="mt-4">Lade Dokumente…</div>}
 
       {error && (
         <div
@@ -60,7 +73,9 @@ export default function Docs() {
       )}
 
       {!loading && !error && docs.length === 0 && (
-        <div className="mt-4">Es sind derzeit keine Dokumente vorhanden.</div>
+        <div className="mt-4">
+          Es sind derzeit keine Dokumente für deinen Account vorhanden.
+        </div>
       )}
 
       {!loading && !error && docs.length > 0 && selectedDoc && (
@@ -70,7 +85,10 @@ export default function Docs() {
             className="rounded-2xl border"
             style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
           >
-            <div className="px-4 py-3 border-b" style={{ borderColor: "var(--cp-line)" }}>
+            <div
+              className="px-4 py-3 border-b"
+              style={{ borderColor: "var(--cp-line)" }}
+            >
               <div className="cp-heading">Dokumente</div>
             </div>
             <div className="max-h-[70vh] overflow-y-auto">
@@ -112,8 +130,10 @@ export default function Docs() {
             className="rounded-2xl border flex flex-col"
             style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
           >
-            <div className="px-4 py-3 flex items-center justify-between border-b"
-                 style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}>
+            <div
+              className="px-4 py-3 flex items-center justify-between border-b"
+              style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
+            >
               <div className="cp-heading">
                 {selectedDoc.title || selectedDoc.path}
               </div>
