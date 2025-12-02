@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
-import { fetchCities } from "../supabaseData";
 import { useAuth } from "../AuthContext.jsx";
 import {
+  fetchCities,
   fetchConversations,
   createConversation,
   fetchMessages,
@@ -10,18 +10,18 @@ import {
 } from "../supabaseData";
 
 export default function Chat() {
+  const { user } = useAuth();
+
   const [messages, setMessages] = useState([
     { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
-
   const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState(""); // String, weil uuid
-  const { user } = useAuth(); // brauchen wir gleich für Conversations
+  const [selectedCity, setSelectedCity] = useState(""); // uuid String
+  const [conversationId, setConversationId] = useState(null);
+  const [loadingConversation, setLoadingConversation] = useState(true);
 
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-const [conversationId, setConversationId] = useState(null);
-const [loadingConversation, setLoadingConversation] = useState(true);
 
   const statusMsg =
     'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
@@ -38,8 +38,19 @@ const [loadingConversation, setLoadingConversation] = useState(true);
     const t = text.trim();
     if (!t || busy) return;
 
+    // lokale Anzeige der User Nachricht
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
+
+    // in DB speichern, falls Conversation existiert
+    if (conversationId) {
+      await addMessage({
+        conversationId,
+        userId: user.id,
+        role: "user",
+        content: t,
+      });
+    }
 
     try {
       const controller = new AbortController();
@@ -76,6 +87,16 @@ const [loadingConversation, setLoadingConversation] = useState(true);
 
       const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
+
+      // Antwort in DB speichern
+      if (conversationId) {
+        await addMessage({
+          conversationId,
+          userId: user.id,
+          role: "assistant",
+          content: replyText,
+        });
+      }
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
     } finally {
@@ -114,6 +135,57 @@ const [loadingConversation, setLoadingConversation] = useState(true);
     loadCities();
   }, []);
 
+  // Conversation pro User + Stadt laden oder anlegen
+  useEffect(() => {
+    if (!user || !selectedCity) return;
+
+    async function loadOrCreateConversation() {
+      setLoadingConversation(true);
+
+      // 1. gibt es schon eine Conversation für diesen User + diese Stadt
+      const { data: convos, error: convError } = await fetchConversations(
+        user.id,
+        selectedCity
+      );
+
+      if (!convError && convos && convos.length > 0) {
+        const convo = convos[0];
+        setConversationId(convo.id);
+
+        const { data: msgs, error: msgError } = await fetchMessages(convo.id);
+        if (!msgError && msgs) {
+          setMessages(
+            msgs.map((m) => ({
+              role: m.role,
+              text: m.content,
+            }))
+          );
+        }
+      } else {
+        // 2. neue Conversation anlegen
+        const { data: convo, error: createError } = await createConversation({
+          userId: user.id,
+          cityId: selectedCity,
+          title: null,
+        });
+
+        if (!createError && convo) {
+          setConversationId(convo.id);
+          setMessages([
+            {
+              role: "assistant",
+              text: "Hallo, was kann ich für dich tun?",
+            },
+          ]);
+        }
+      }
+
+      setLoadingConversation(false);
+    }
+
+    loadOrCreateConversation();
+  }, [user, selectedCity]);
+
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
     const isSystem = role === "system";
@@ -142,6 +214,17 @@ const [loadingConversation, setLoadingConversation] = useState(true);
       </div>
     );
   };
+
+  if (loadingConversation) {
+    return (
+      <AppShell title="Chat">
+        <a href="/" className="cp-small cp-link">
+          ← Zurück
+        </a>
+        <div style={{ padding: "2rem" }}>Conversation wird geladen…</div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Chat">
