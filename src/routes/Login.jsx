@@ -216,8 +216,7 @@ export default function Login() {
               lineHeight: 1.5,
             }}
           >
-            Du hast noch keinen Zugang oder Probleme beim Login. 
-            Wende dich bitte an die Foresight Academy.
+    
           </p>
         </div>
       </div>
