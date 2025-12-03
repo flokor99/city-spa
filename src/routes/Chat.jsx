@@ -135,12 +135,12 @@ export default function Chat() {
     }
   }, []);
 
-  // Städte laden + ggf. Stadt aus Schnellstart anlegen / auswählen
+  // Städte laden und ggf Stadt aus Schnellstart anlegen / auswählen
   useEffect(() => {
     async function initCities() {
       let targetCityId = null;
 
-      // 1. Wenn Schnellstart genutzt wurde. Stadt in Supabase holen/erstellen
+      // wenn Schnellstart genutzt wurde. Stadt in Supabase holen oder anlegen
       if (urlCity) {
         const { data: targetCity, error: cityError } =
           await getOrCreateCityByName(urlCity);
@@ -152,7 +152,7 @@ export default function Chat() {
         }
       }
 
-      // 2. Alle Städte laden (inkl. eventuell gerade neu angelegter)
+      // alle Städte laden
       const { data, error } = await fetchCities();
       if (error) {
         console.error("Fehler beim Laden der Städte:", error);
@@ -162,12 +162,9 @@ export default function Chat() {
       const list = data || [];
       setCities(list);
 
-      // 3. Auswahl setzen
       if (targetCityId) {
-        // Stadt aus Schnellstart auswählen
         setSelectedCity(targetCityId);
       } else if (list.length > 0) {
-        // Standard. erste Stadt
         setSelectedCity(list[0].id);
       }
     }
@@ -175,7 +172,7 @@ export default function Chat() {
     initCities();
   }, [urlCity]);
 
-  // Conversation laden oder erstellen, sobald User und Stadt klar sind
+  // Conversation laden oder erstellen
   useEffect(() => {
     if (!user || !selectedCity || cities.length === 0) return;
 
@@ -207,7 +204,9 @@ export default function Chat() {
       setConversationId(convo.id);
 
       const { data: msgs, error: msgError } = await fetchMessages(convo.id);
+
       if (!msgError && msgs && msgs.length > 0) {
+        // vorhandene Nachrichten aus DB immer anzeigen
         setMessages(
           msgs.map((m) => ({
             role: m.role,
@@ -215,16 +214,19 @@ export default function Chat() {
           }))
         );
       } else {
-        setMessages([
-          { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
-        ]);
+        // nur Begrüßung setzen, wenn kein Auto Schnellstart ansteht
+        if (!urlCity || hasAutoStarted) {
+          setMessages([
+            { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+          ]);
+        }
       }
 
       setLoadingConversation(false);
     }
 
     loadOrCreateConversation();
-  }, [user, selectedCity, cities]);
+  }, [user, selectedCity, cities, urlCity, hasAutoStarted]);
 
   // Schnellstart auslösen, sobald Conversation bereit ist
   useEffect(() => {
@@ -233,16 +235,18 @@ export default function Chat() {
     if (hasAutoStarted) return;
 
     setHasAutoStarted(true);
+    // Nachricht schicken
     sendText(
       `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
     );
+    // danach urlCity leeren, damit spätere Stadt Wechsel normal laufen
+    setUrlCity(null);
   }, [urlCity, conversationId, hasAutoStarted]);
 
-  // Wechsel im Dropdown inkl. "Neue Stadt" Option
+  // Wechsel im Dropdown inkl neue Stadt
   const handleCityChange = async (e) => {
     const value = e.target.value;
 
-    // Sonderfall. neue Stadt anlegen
     if (value === "__new__") {
       const name = window.prompt(
         "Für welche Stadt soll ein neuer Chat angelegt werden?"
@@ -259,7 +263,6 @@ export default function Chat() {
         return;
       }
 
-      // Stadt in die Liste aufnehmen, falls noch nicht drin
       setCities((prev) => {
         const exists = prev.some((c) => c.id === city.id);
         return exists ? prev : [...prev, city];
@@ -269,7 +272,6 @@ export default function Chat() {
       return;
     }
 
-    // normaler Wechsel
     setSelectedCity(value);
   };
 
