@@ -23,7 +23,7 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // wird gesetzt, wenn /chat?city=Name aufgerufen wird
+  // Stadt aus ?city=... merken, um gezielt eine neue Conversation zu starten
   const [pendingCity, setPendingCity] = useState(null);
 
   const statusMsg =
@@ -43,18 +43,25 @@ export default function Chat() {
     d?.text ||
     "…";
 
-  const sendText = async (text) => {
+  // sendText kann optional eine explizite conversationId bekommen (wichtig für frisch erzeugte Conversations)
+  const sendText = async (text, overrideConversationId = null) => {
     const t = text.trim();
     if (!t || busy) return;
+
+    const convId = overrideConversationId || conversationId;
+    if (!convId) {
+      console.warn("Kein conversationId gesetzt, breche sendText ab");
+      return;
+    }
 
     // lokale Anzeige der User Nachricht
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
-    // User-Nachricht in DB speichern, falls Conversation schon existiert
-    if (conversationId && user) {
+    // User-Nachricht in DB speichern
+    if (user) {
       await addMessage({
-        conversationId,
+        conversationId: convId,
         userId: user.id,
         role: "user",
         content: t,
@@ -70,6 +77,7 @@ export default function Chat() {
       // Payload für Netlify Function
       const payload = {
         message: t,
+        conversationId: convId,
       };
 
       if (user?.email) {
@@ -77,9 +85,6 @@ export default function Chat() {
       }
       if (cityName) {
         payload.city = cityName;
-      }
-      if (conversationId) {
-        payload.conversationId = conversationId;
       }
 
       const r = await fetch("/.netlify/functions/chat", {
@@ -116,9 +121,9 @@ export default function Chat() {
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
 
       // Antwort in DB speichern
-      if (conversationId && user) {
+      if (user) {
         await addMessage({
-          conversationId,
+          conversationId: convId,
           userId: user.id,
           role: "assistant",
           content: replyText,
@@ -137,7 +142,7 @@ export default function Chat() {
     setInput("");
   };
 
-  // Städte laden und ggf. Stadt aus ?city=... vorauswählen
+  // Städte laden und Stadt aus ?city=... erkennen
   useEffect(() => {
     async function loadCities() {
       const { data, error } = await fetchCities();
@@ -178,84 +183,111 @@ export default function Chat() {
     loadCities();
   }, []);
 
-  // Conversation pro User + Stadt laden oder anlegen
+  // Conversation pro User + Stadt laden oder (bei pendingCity) NEU anlegen
   useEffect(() => {
     if (!user || !selectedCity) return;
+
+    let cancelled = false;
 
     async function loadOrCreateConversation() {
       setLoadingConversation(true);
 
-      const { data: convos, error: convError } = await fetchConversations(
-        user.id,
-        selectedCity
-      );
+      try {
+        // Schnellstart-Fall: pendingCity ist gesetzt -> immer neue Conversation
+        if (pendingCity) {
+          const { data: convo, error: createError } = await createConversation({
+            userId: user.id,
+            cityId: selectedCity,
+            title: pendingCity,
+          });
 
-      if (!convError && convos && convos.length > 0) {
-        const convo = convos[0];
-        setConversationId(convo.id);
+          if (cancelled) return;
 
-        const { data: msgs, error: msgError } = await fetchMessages(
-          convo.id
-        );
-        if (!msgError && msgs) {
-          setMessages(
-            msgs.map((m) => ({
-              role: m.role,
-              text: m.content,
-            }))
-          );
+          if (!createError && convo) {
+            const newConvId = convo.id;
+            setConversationId(newConvId);
+            setMessages([
+              {
+                role: "assistant",
+                text: "Hallo, was kann ich für dich tun?",
+              },
+            ]);
+
+            // Auto-Nachricht in diese neue Conversation schicken
+            await sendText(
+              `Bitte starte eine vollständige Analyse für ${pendingCity}. Erzeuge anschließend den PDF-Output.`,
+              newConvId
+            );
+
+            // ?city aus der URL entfernen
+            if (typeof window !== "undefined") {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("city");
+              window.history.replaceState(
+                {},
+                "",
+                url.pathname + url.search
+              );
+            }
+
+            setPendingCity(null);
+          }
+          return;
         }
-      } else {
-        const { data: convo, error: createError } = await createConversation({
-          userId: user.id,
-          cityId: selectedCity,
-          title: null,
-        });
 
-        if (!createError && convo) {
+        // Normalfall: bestehende Conversation für User + Stadt laden oder anlegen
+        const { data: convos, error: convError } = await fetchConversations(
+          user.id,
+          selectedCity
+        );
+
+        if (cancelled) return;
+
+        if (!convError && convos && convos.length > 0) {
+          const convo = convos[0];
           setConversationId(convo.id);
-          setMessages([
-            {
-              role: "assistant",
-              text: "Hallo, was kann ich für dich tun?",
-            },
-          ]);
+
+          const { data: msgs, error: msgError } = await fetchMessages(
+            convo.id
+          );
+          if (!msgError && msgs) {
+            setMessages(
+              msgs.map((m) => ({
+                role: m.role,
+                text: m.content,
+              }))
+            );
+          }
+        } else {
+          const { data: convo, error: createError } = await createConversation({
+            userId: user.id,
+            cityId: selectedCity,
+            title: null,
+          });
+
+          if (!createError && convo) {
+            setConversationId(convo.id);
+            setMessages([
+              {
+                role: "assistant",
+                text: "Hallo, was kann ich für dich tun?",
+              },
+            ]);
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingConversation(false);
         }
       }
-
-      setLoadingConversation(false);
     }
 
     loadOrCreateConversation();
-  }, [user, selectedCity]);
 
-  // Schnellstart: wenn pendingCity gesetzt ist und Conversation geladen wurde,
-  // eine Auto-Nachricht in genau diese Conversation schicken
-  useEffect(() => {
-    if (!pendingCity) return;
-    if (!conversationId) return;
-
-    async function runAutoStart() {
-      await sendText(
-        `Bitte starte eine vollständige Analyse für ${pendingCity}. Erzeuge anschließend den PDF-Output.`
-      );
-
-      // ?city aus der URL entfernen
-      if (typeof window !== "undefined") {
-        const url = new URL(window.location.href);
-        url.searchParams.delete("city");
-        window.history.replaceState(
-          {},
-          "",
-          url.pathname + url.search
-        );
-      }
-
-      setPendingCity(null);
-    }
-
-    runAutoStart();
-  }, [pendingCity, conversationId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, selectedCity, pendingCity]); // pendingCity triggert „neue Conversation“ beim Schnellstart
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -297,6 +329,15 @@ export default function Chat() {
     );
   }
 
+  const handleCityChange = (e) => {
+    const newCityId = e.target.value;
+    setSelectedCity(newCityId);
+    setConversationId(null);
+    setMessages([
+      { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+    ]);
+  };
+
   return (
     <AppShell title="Chat">
       <a href="/" className="cp-small cp-link">
@@ -308,7 +349,7 @@ export default function Chat() {
         <label className="cp-small">Stadt auswählen:</label>
         <select
           value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
+          onChange={handleCityChange}
           className="cp-input"
           style={{ maxWidth: 250 }}
         >
