@@ -47,21 +47,24 @@ export default function Chat() {
     const t = text.trim();
     if (!t || busy) return;
 
+    // Benutzer Nachricht direkt anzeigen
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
-    if (conversationId && user) {
-      await addMessage({
-        conversationId,
-        userId: user.id,
-        role: "user",
-        content: t,
-      });
-    }
+    // Timeout Nachricht nach 25 Sekunden, falls bis dahin nichts zurückkam
+    const timeoutId = setTimeout(() => {
+      setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+    }, 25000);
 
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 30000);
+      if (conversationId && user) {
+        await addMessage({
+          conversationId,
+          userId: user.id,
+          role: "user",
+          content: t,
+        });
+      }
 
       const cityName = getSelectedCityName();
 
@@ -74,32 +77,20 @@ export default function Chat() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
-        signal: controller.signal,
       });
-      clearTimeout(timer);
-
-      if (r.status === 202) {
-        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
-        return;
-      }
 
       if (!r.ok) {
-        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        console.error("Chat Funktion Fehlerstatus:", r.status);
+        // Timeout Nachricht übernimmt die Nutzerinfo
         return;
       }
 
       const d = await r.json();
-
-      if (
-        d?.accepted === true ||
-        d?.status === "Accepted" ||
-        (typeof d?.reply === "string" && d.reply.toLowerCase() === "accepted")
-      ) {
-        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
-        return;
-      }
-
       const replyText = getReplyText(d);
+
+      // echte Antwort ist da. keine Timeout Nachricht mehr
+      clearTimeout(timeoutId);
+
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
 
       if (conversationId && user) {
@@ -111,8 +102,10 @@ export default function Chat() {
         });
       }
     } catch (err) {
-      setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+      console.error("Fehler im sendText:", err);
+      // Timeout kümmert sich um die Nutzerinfo
     } finally {
+      clearTimeout(timeoutId);
       setBusy(false);
     }
   };
@@ -131,7 +124,7 @@ export default function Chat() {
     if (city) {
       setUrlCity(city);
       setAutoMessage(
-        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`
+        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF Output.`
       );
       // URL säubern
       window.history.replaceState({}, "", "/chat");
