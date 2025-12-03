@@ -7,11 +7,13 @@ export default function App() {
   const [city, setCity] = useState("");
 
   const startAnalysis = (e) => {
-    e.preventDefault();
-    const c = city.trim();
-    if (!c) return;
-    navigate(`/chat?city=${encodeURIComponent(c)}`);
-  };
+  e.preventDefault();
+  const c = city.trim();
+  if (!c) return;
+  // new=1 signalisiert dem Chat: bitte neue Conversation anlegen
+  navigate(`/chat?city=${encodeURIComponent(c)}&new=1`);
+};
+
 
   const Card = ({ href, title, desc, img }) => (
     <a
