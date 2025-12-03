@@ -2,6 +2,22 @@
 import { supabase } from "./supabaseClient";
 
 /**
+ * Kleine Hilfsfunktion, um aus einem Stadtnamen einen Slug zu machen
+ * z. B. "Köln Innenstadt" -> "koeln-innenstadt"
+ */
+function slugifyCityName(name) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .replace(/[^a-z0-9]+/g, "-") // alles Nicht-Alphanumerische zu "-"
+    .replace(/^-+|-+$/g, ""); // führende/trailing "-" entfernen
+}
+
+/**
  * Alle Städte laden
  */
 export async function fetchCities() {
@@ -11,6 +27,42 @@ export async function fetchCities() {
     .order("name", { ascending: true });
 
   return { data, error };
+}
+
+/**
+ * Stadt per Name holen oder anlegen.
+ * Nutzt den Slug als eindeutigen Schlüssel.
+ */
+export async function getOrCreateCityByName(rawName) {
+  const name = (rawName || "").trim();
+  if (!name) {
+    return { data: null, error: new Error("City name is empty") };
+  }
+
+  const slug = slugifyCityName(name);
+
+  // 1. Gibt es schon eine Stadt mit diesem Slug
+  let { data, error } = await supabase
+    .from("cities")
+    .select("*")
+    .eq("slug", slug);
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  if (data && data.length > 0) {
+    return { data: data[0], error: null };
+  }
+
+  // 2. Wenn nicht, neue Stadt anlegen
+  const { data: inserted, error: insertError } = await supabase
+    .from("cities")
+    .insert([{ slug, name }])
+    .select()
+    .single();
+
+  return { data: inserted, error: insertError };
 }
 
 /**
@@ -49,6 +101,26 @@ export async function createConversation({ userId, cityId, title }) {
     .single();
 
   return { data, error };
+}
+
+/**
+ * Für eine Stadt und einen User eine Conversation holen oder anlegen.
+ * Variante. pro Stadt und User maximal ein Chat. wenn es schon eine gibt, nimm die.
+ */
+export async function getOrCreateConversationForCity({ userId, cityId, title }) {
+  // erst schauen, ob schon eine Conversation existiert
+  const { data: convos, error } = await fetchConversations(userId, cityId);
+  if (error) {
+    return { data: null, error };
+  }
+
+  if (convos && convos.length > 0) {
+    // nimm die jüngste, da fetchConversations nach updated_at sortiert
+    return { data: convos[0], error: null };
+  }
+
+  // sonst neu anlegen
+  return await createConversation({ userId, cityId, title });
 }
 
 /**

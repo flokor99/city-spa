@@ -1,3 +1,4 @@
+// src/routes/Chat.jsx
 import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { useAuth } from "../AuthContext.jsx";
@@ -7,6 +8,7 @@ import {
   createConversation,
   fetchMessages,
   addMessage,
+  getOrCreateCityByName, // neu: Stadt per Namen holen/anlegen
 } from "../supabaseData";
 
 export default function Chat() {
@@ -16,7 +18,7 @@ export default function Chat() {
     { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
   const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCity, setSelectedCity] = useState(""); // city_id
   const [conversationId, setConversationId] = useState(null);
   const [loadingConversation, setLoadingConversation] = useState(true);
 
@@ -42,6 +44,7 @@ export default function Chat() {
     d?.text ||
     "…";
 
+  // *** DEIN ursprüngliches sendText – unverändert ***
   const sendText = async (text) => {
     const t = text.trim();
     if (!t || busy) return;
@@ -133,25 +136,49 @@ export default function Chat() {
     }
   }, []);
 
-  // Städte laden + Schnellstart-Stadt auswählen
+  // Städte laden + Schnellstart-Stadt anlegen/auswählen
   useEffect(() => {
     async function loadCities() {
       const { data, error } = await fetchCities();
-      if (!error && data) {
-        setCities(data);
+      if (error || !data) {
+        console.error("Fehler beim Laden der Städte:", error);
+        return;
+      }
 
-        if (data.length > 0) {
-          if (urlCity) {
-            const match = data.find(
-              (c) => c.name.toLowerCase() === urlCity.toLowerCase()
-            );
-            setSelectedCity(match ? match.id : data[0].id);
-          } else {
-            setSelectedCity(data[0].id);
+      let list = data;
+      let initialCityId = null;
+
+      if (urlCity) {
+        const lower = urlCity.toLowerCase();
+        const match = list.find((c) => c.name.toLowerCase() === lower);
+
+        if (match) {
+          // Stadt existiert schon
+          initialCityId = match.id;
+        } else {
+          // Stadt gibt es noch nicht. in Supabase anlegen
+          const { data: newCity, error: cityErr } = await getOrCreateCityByName(
+            urlCity
+          );
+          if (!cityErr && newCity) {
+            if (!list.some((c) => c.id === newCity.id)) {
+              list = [...list, newCity];
+            }
+            initialCityId = newCity.id;
+          } else if (list.length > 0) {
+            initialCityId = list[0].id;
           }
         }
+      } else if (list.length > 0) {
+        initialCityId = list[0].id;
+      }
+
+      setCities(list);
+      if (initialCityId) {
+        setSelectedCity(initialCityId);
       }
     }
+
     loadCities();
   }, [urlCity]);
 
@@ -216,6 +243,36 @@ export default function Chat() {
     );
   }, [urlCity, conversationId, hasAutoStarted]);
 
+  // Dropdown-Wechsel inkl. „+ Neue Stadt…“
+  const handleCityChange = async (e) => {
+    const value = e.target.value;
+
+    if (value === "__new__") {
+      const name = window.prompt(
+        "Für welche Stadt soll ein neuer Chat angelegt werden?"
+      );
+      if (!name || !name.trim()) return;
+
+      const trimmed = name.trim();
+
+      const { data: city, error } = await getOrCreateCityByName(trimmed);
+      if (error || !city) {
+        alert("Die Stadt konnte nicht angelegt werden.");
+        return;
+      }
+
+      setCities((prev) => {
+        const exists = prev.some((c) => c.id === city.id);
+        return exists ? prev : [...prev, city];
+      });
+
+      setSelectedCity(city.id);
+      return;
+    }
+
+    setSelectedCity(value);
+  };
+
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
     const isSystem = role === "system";
@@ -264,7 +321,7 @@ export default function Chat() {
         <label className="cp-small">Stadt auswählen:</label>
         <select
           value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
+          onChange={handleCityChange}
           className="cp-input"
           style={{ maxWidth: 250 }}
         >
@@ -273,6 +330,7 @@ export default function Chat() {
               {c.name}
             </option>
           ))}
+          <option value="__new__">+ Neue Stadt…</option>
         </select>
       </div>
 
