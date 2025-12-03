@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { useAuth } from "../AuthContext.jsx";
 import {
@@ -7,6 +7,8 @@ import {
   createConversation,
   fetchMessages,
   addMessage,
+  getOrCreateCityByName,
+  getOrCreateConversationForCity,
 } from "../supabaseData";
 
 export default function Chat() {
@@ -25,6 +27,8 @@ export default function Chat() {
 
   const [urlCity, setUrlCity] = useState(null); // Stadt aus ?city=
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
+
+  const lastSelectedCityRef = useRef("");
 
   const getSelectedCityName = () => {
     const cityObj = cities.find((c) => c.id === selectedCity);
@@ -129,73 +133,101 @@ export default function Chat() {
     const city = params.get("city");
     if (city) {
       setUrlCity(city);
+      // URL aufräumen, damit /chat sauber ist
       window.history.replaceState({}, "", "/chat");
     }
   }, []);
 
-  // Städte laden + Schnellstart-Stadt auswählen
+  // Städte laden + evtl. Stadt aus Schnellstart anlegen / auswählen
   useEffect(() => {
     async function loadCities() {
       const { data, error } = await fetchCities();
-      if (!error && data) {
-        setCities(data);
+      if (error) {
+        console.error("Fehler beim Laden der Städte", error);
+        return;
+      }
 
-        if (data.length > 0) {
-          if (urlCity) {
-            const match = data.find(
-              (c) => c.name.toLowerCase() === urlCity.toLowerCase()
-            );
-            setSelectedCity(match ? match.id : data[0].id);
-          } else {
-            setSelectedCity(data[0].id);
+      let list = data || [];
+      let initialCityId = null;
+
+      if (urlCity) {
+        // versuche Stadt per Namen zu finden
+        const match = list.find(
+          (c) => c.name.toLowerCase() === urlCity.toLowerCase()
+        );
+
+        if (match) {
+          initialCityId = match.id;
+        } else {
+          // noch nicht vorhanden. in Supabase anlegen
+          const { data: newCity, error: cityErr } = await getOrCreateCityByName(
+            urlCity
+          );
+          if (!cityErr && newCity) {
+            const alreadyInList = list.some((c) => c.id === newCity.id);
+            if (!alreadyInList) {
+              list = [...list, newCity];
+            }
+            initialCityId = newCity.id;
           }
         }
+      } else if (list.length > 0) {
+        initialCityId = list[0].id;
+      }
+
+      setCities(list);
+      if (initialCityId) {
+        setSelectedCity(initialCityId);
+        lastSelectedCityRef.current = initialCityId;
       }
     }
+
     loadCities();
   }, [urlCity]);
 
-  // Conversation laden/erstellen
+  // Conversation laden oder erstellen, sobald User und Stadt klar sind
   useEffect(() => {
     if (!user || !selectedCity || cities.length === 0) return;
 
     async function loadOrCreateConversation() {
       setLoadingConversation(true);
 
-      const { data: convos, error: convError } = await fetchConversations(
-        user.id,
-        selectedCity
-      );
+      const cityObj = cities.find((c) => c.id === selectedCity);
+      const cityNameForTitle = cityObj ? cityObj.name : null;
 
-      if (!convError && convos && convos.length > 0) {
-        const convo = convos[0];
-        setConversationId(convo.id);
-
-        const { data: msgs, error: msgError } = await fetchMessages(convo.id);
-        if (!msgError && msgs) {
-          setMessages(
-            msgs.map((m) => ({
-              role: m.role,
-              text: m.content,
-            }))
-          );
-        }
-      } else {
-        const cityObj = cities.find((c) => c.id === selectedCity);
-        const cityNameForTitle = cityObj ? cityObj.name : null;
-
-        const { data: convo, error: createError } = await createConversation({
+      const { data: convo, error: convoError } =
+        await getOrCreateConversationForCity({
           userId: user.id,
           cityId: selectedCity,
           title: cityNameForTitle,
         });
 
-        if (!createError && convo) {
-          setConversationId(convo.id);
-          setMessages([
-            { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
-          ]);
-        }
+      if (convoError || !convo) {
+        console.error("Fehler beim Laden/Anlegen der Conversation", convoError);
+        setMessages([
+          {
+            role: "assistant",
+            text: "Es gab ein Problem beim Laden des Chats.",
+          },
+        ]);
+        setLoadingConversation(false);
+        return;
+      }
+
+      setConversationId(convo.id);
+
+      const { data: msgs, error: msgError } = await fetchMessages(convo.id);
+      if (!msgError && msgs && msgs.length > 0) {
+        setMessages(
+          msgs.map((m) => ({
+            role: m.role,
+            text: m.content,
+          }))
+        );
+      } else {
+        setMessages([
+          { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+        ]);
       }
 
       setLoadingConversation(false);
@@ -215,6 +247,44 @@ export default function Chat() {
       `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
     );
   }, [urlCity, conversationId, hasAutoStarted]);
+
+  // Wechsel im Dropdown inklusive "Neue Stadt" Option
+  const handleCityChange = async (e) => {
+    const value = e.target.value;
+
+    // Sonderfall. neue Stadt anlegen
+    if (value === "__new__") {
+      const name = window.prompt(
+        "Für welche Stadt soll ein neuer Chat angelegt werden?"
+      );
+      if (!name || !name.trim()) {
+        // nichts ändern, Auswahl bleibt auf der vorherigen Stadt
+        return;
+      }
+
+      const trimmed = name.trim();
+
+      const { data: city, error } = await getOrCreateCityByName(trimmed);
+      if (error || !city) {
+        alert("Die Stadt konnte nicht angelegt werden.");
+        return;
+      }
+
+      // Stadt in die Liste aufnehmen, falls noch nicht drin
+      setCities((prev) => {
+        const exists = prev.some((c) => c.id === city.id);
+        return exists ? prev : [...prev, city];
+      });
+
+      setSelectedCity(city.id);
+      lastSelectedCityRef.current = city.id;
+      return;
+    }
+
+    // normaler Wechsel
+    setSelectedCity(value);
+    lastSelectedCityRef.current = value;
+  };
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -264,7 +334,7 @@ export default function Chat() {
         <label className="cp-small">Stadt auswählen:</label>
         <select
           value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
+          onChange={handleCityChange}
           className="cp-input"
           style={{ maxWidth: 250 }}
         >
@@ -273,6 +343,7 @@ export default function Chat() {
               {c.name}
             </option>
           ))}
+          <option value="__new__">+ Neue Stadt…</option>
         </select>
       </div>
 
