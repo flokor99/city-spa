@@ -4,10 +4,11 @@ import AppShell from "../components/AppShell.jsx";
 import { useAuth } from "../AuthContext.jsx";
 import {
   fetchCities,
+  fetchConversations,
+  createConversation,
   fetchMessages,
   addMessage,
-  getOrCreateCityByName,
-  getOrCreateConversationForCity,
+  getOrCreateCityByName, // neu
 } from "../supabaseData";
 
 export default function Chat() {
@@ -24,8 +25,8 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const [urlCity, setUrlCity] = useState(null);         // Stadt aus ?city=
-  const [autoMessage, setAutoMessage] = useState(null); // Text für Schnellstart
+  const [urlCity, setUrlCity] = useState(null); // Stadt aus ?city=
+  const [hasAutoStarted, setHasAutoStarted] = useState(false);
 
   const getSelectedCityName = () => {
     const cityObj = cities.find((c) => c.id === selectedCity);
@@ -47,12 +48,11 @@ export default function Chat() {
     const t = text.trim();
     if (!t || busy) return;
 
-    // Benutzer Nachricht direkt anzeigen
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
-    // Timeout Nachricht nach 25 Sekunden, falls bis dahin nichts zurückkam
-    const timeoutId = setTimeout(() => {
+    // Timeout. wenn keine „normale“ Antwort kommt, zeigen wir nach 25s den Status
+    const statusTimeoutId = setTimeout(() => {
       setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
     }, 25000);
 
@@ -66,6 +66,9 @@ export default function Chat() {
         });
       }
 
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 30000);
+
       const cityName = getSelectedCityName();
 
       const payload = { message: t };
@@ -77,20 +80,34 @@ export default function Chat() {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
+      clearTimeout(abortTimer);
 
       if (!r.ok) {
         console.error("Chat Funktion Fehlerstatus:", r.status);
-        // Timeout Nachricht übernimmt die Nutzerinfo
+        // Kein sofortiger Status. Timeout übernimmt es
         return;
       }
 
       const d = await r.json();
+
+      const isAccepted =
+        r.status === 202 ||
+        d?.accepted === true ||
+        d?.status === "Accepted" ||
+        (typeof d?.reply === "string" &&
+          d.reply.toLowerCase() === "accepted");
+
+      if (isAccepted) {
+        // Analyse wurde angenommen. wir lassen den Timeout laufen
+        return;
+      }
+
+      // Normale Antwort. Status Timeout abbrechen
+      clearTimeout(statusTimeoutId);
+
       const replyText = getReplyText(d);
-
-      // echte Antwort ist da. keine Timeout Nachricht mehr
-      clearTimeout(timeoutId);
-
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
 
       if (conversationId && user) {
@@ -103,9 +120,10 @@ export default function Chat() {
       }
     } catch (err) {
       console.error("Fehler im sendText:", err);
-      // Timeout kümmert sich um die Nutzerinfo
+      // Timeout zeigt Status an
     } finally {
-      clearTimeout(timeoutId);
+      // Falls schon eine Antwort kam, ist der Timeout bereits gecleart
+      // Falls nicht, soll er weiterlaufen
       setBusy(false);
     }
   };
@@ -116,101 +134,100 @@ export default function Chat() {
     setInput("");
   };
 
-  // Stadt und Auto Text aus URL lesen
+  // Stadt aus URL lesen
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const city = params.get("city");
     if (city) {
       setUrlCity(city);
-      setAutoMessage(
-        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF Output.`
-      );
-      // URL säubern
       window.history.replaceState({}, "", "/chat");
     }
   }, []);
 
-  // Städte laden und ggf Stadt aus Schnellstart anlegen / auswählen
+  // Städte laden + Schnellstart-Stadt anlegen/auswählen
   useEffect(() => {
-    async function initCities() {
-      let targetCityId = null;
-
-      // Stadt aus Schnellstart in Supabase holen oder anlegen
-      if (urlCity) {
-        const { data: targetCity, error: cityError } =
-          await getOrCreateCityByName(urlCity);
-
-        if (cityError) {
-          console.error("Fehler beim Anlegen/Finden der Stadt:", cityError);
-        } else if (targetCity) {
-          targetCityId = targetCity.id;
-        }
-      }
-
+    async function loadCities() {
       const { data, error } = await fetchCities();
       if (error) {
         console.error("Fehler beim Laden der Städte:", error);
         return;
       }
 
-      const list = data || [];
-      setCities(list);
+      let list = data || [];
+      let initialCityId = null;
 
-      if (targetCityId) {
-        setSelectedCity(targetCityId);
+      if (urlCity) {
+        const lower = urlCity.toLowerCase();
+        const match = list.find((c) => c.name.toLowerCase() === lower);
+
+        if (match) {
+          initialCityId = match.id;
+        } else {
+          // noch nicht vorhanden. in Supabase anlegen
+          const { data: newCity, error: cityErr } = await getOrCreateCityByName(
+            urlCity
+          );
+          if (!cityErr && newCity) {
+            const exists = list.some((c) => c.id === newCity.id);
+            if (!exists) list = [...list, newCity];
+            initialCityId = newCity.id;
+          }
+        }
       } else if (list.length > 0) {
-        setSelectedCity(list[0].id);
+        initialCityId = list[0].id;
+      }
+
+      setCities(list);
+      if (initialCityId) {
+        setSelectedCity(initialCityId);
       }
     }
 
-    initCities();
+    loadCities();
   }, [urlCity]);
 
-  // Conversation laden oder erstellen
+  // Conversation laden/erstellen
   useEffect(() => {
     if (!user || !selectedCity || cities.length === 0) return;
 
     async function loadOrCreateConversation() {
       setLoadingConversation(true);
 
-      const cityObj = cities.find((c) => c.id === selectedCity);
-      const cityNameForTitle = cityObj ? cityObj.name : null;
+      const { data: convos, error: convError } = await fetchConversations(
+        user.id,
+        selectedCity
+      );
 
-      const { data: convo, error: convoError } =
-        await getOrCreateConversationForCity({
+      if (!convError && convos && convos.length > 0) {
+        const convo = convos[0];
+        setConversationId(convo.id);
+
+        const { data: msgs, error: msgError } = await fetchMessages(convo.id);
+        if (!msgError && msgs) {
+          setMessages(
+            msgs.map((m) => ({
+              role: m.role,
+              text: m.content,
+            }))
+          );
+        }
+      } else {
+        const cityObj = cities.find((c) => c.id === selectedCity);
+        const cityNameForTitle = cityObj ? cityObj.name : null;
+
+        const { data: convo, error: createError } = await createConversation({
           userId: user.id,
           cityId: selectedCity,
           title: cityNameForTitle,
         });
 
-      if (convoError || !convo) {
-        console.error("Fehler beim Laden/Anlegen der Conversation", convoError);
-        setMessages([
-          {
-            role: "assistant",
-            text: "Es gab ein Problem beim Laden des Chats.",
-          },
-        ]);
-        setLoadingConversation(false);
-        return;
-      }
-
-      setConversationId(convo.id);
-
-      const { data: msgs, error: msgError } = await fetchMessages(convo.id);
-
-      if (!msgError && msgs && msgs.length > 0) {
-        setMessages(
-          msgs.map((m) => ({
-            role: m.role,
-            text: m.content,
-          }))
-        );
-      } else {
-        setMessages([
-          { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
-        ]);
+        if (!createError && convo) {
+          setConversationId(convo.id);
+          setMessages([
+            { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+          ]);
+        }
       }
 
       setLoadingConversation(false);
@@ -219,16 +236,19 @@ export default function Chat() {
     loadOrCreateConversation();
   }, [user, selectedCity, cities]);
 
-  // Wenn wir aus Schnellstart kommen. Auto Text ins Eingabefeld legen, aber nicht automatisch senden
+  // Schnellstart. sobald Conversation bereit ist, Text NUR ins Eingabefeld schreiben
   useEffect(() => {
-    if (!autoMessage) return;
+    if (!urlCity) return;
     if (!conversationId) return;
+    if (hasAutoStarted) return;
 
-    setInput(autoMessage);
-    setAutoMessage(null);
-  }, [autoMessage, conversationId]);
+    setHasAutoStarted(true);
+    setInput(
+      `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
+    );
+  }, [urlCity, conversationId, hasAutoStarted]);
 
-  // Wechsel im Dropdown inkl neue Stadt
+  // Wechsel im Dropdown inkl. „+ Neue Stadt…“
   const handleCityChange = async (e) => {
     const value = e.target.value;
 
@@ -236,9 +256,7 @@ export default function Chat() {
       const name = window.prompt(
         "Für welche Stadt soll ein neuer Chat angelegt werden?"
       );
-      if (!name || !name.trim()) {
-        return;
-      }
+      if (!name || !name.trim()) return;
 
       const trimmed = name.trim();
 
