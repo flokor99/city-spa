@@ -23,10 +23,10 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Schnellstart: wenn /chat?city=Name aufgerufen wird
-  // merken wir uns Name + CityId
-  const [pendingCityName, setPendingCityName] = useState(null);
-  const [pendingCityId, setPendingCityId] = useState(null);
+  // Schnellstart-Infos aus der URL
+  const [quickstartCityName, setQuickstartCityName] = useState(null);
+  const [quickstartCityId, setQuickstartCityId] = useState(null);
+  const [forceNewConversation, setForceNewConversation] = useState(false);
 
   const statusMsg =
     'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
@@ -48,7 +48,7 @@ export default function Chat() {
   /**
    * sendText
    *  - nutzt optional overrideConversationId (für frisch angelegte Conversations)
-   *  - nutzt optional overrideCityName (für korrekten City-Namen beim Schnellstart)
+   *  - nutzt optional overrideCityName (korrekter City-Name beim Schnellstart)
    */
   const sendText = async (
     text,
@@ -60,7 +60,7 @@ export default function Chat() {
 
     const convId = overrideConversationId || conversationId;
     if (!convId) {
-      console.warn("Keine conversationId gesetzt, breche sendText ab");
+      console.warn("Kein conversationId gesetzt, breche sendText ab");
       return;
     }
 
@@ -154,8 +154,9 @@ export default function Chat() {
 
   /**
    * Städte laden
-   * - wenn ?city=Name in der URL: passende Stadt suchen
-   *   -> selectedCity + pendingCityName + pendingCityId setzen
+   * - wenn ?city=Name&new=1 in der URL: passende Stadt suchen
+   *   -> selectedCity setzen
+   *   -> quickstartCityName + quickstartCityId + forceNewConversation setzen
    */
   useEffect(() => {
     async function loadCities() {
@@ -164,12 +165,16 @@ export default function Chat() {
         setCities(data);
 
         let initialCityId = null;
-        let pName = null;
-        let pId = null;
+
+        let qsName = null;
+        let qsId = null;
+        let qsForceNew = false;
 
         if (typeof window !== "undefined") {
           const params = new URLSearchParams(window.location.search);
           const cityParam = params.get("city");
+          const newParam = params.get("new");
+
           if (cityParam) {
             const match = data.find(
               (c) =>
@@ -178,8 +183,11 @@ export default function Chat() {
             );
             if (match) {
               initialCityId = match.id;
-              pName = match.name;
-              pId = match.id;
+              qsName = match.name;
+              qsId = match.id;
+              if (newParam === "1") {
+                qsForceNew = true;
+              }
             }
           }
         }
@@ -191,9 +199,11 @@ export default function Chat() {
         if (initialCityId) {
           setSelectedCity(initialCityId);
         }
-        if (pName && pId) {
-          setPendingCityName(pName);
-          setPendingCityId(pId);
+
+        if (qsName && qsId && qsForceNew) {
+          setQuickstartCityName(qsName);
+          setQuickstartCityId(qsId);
+          setForceNewConversation(true);
         }
       }
     }
@@ -201,20 +211,74 @@ export default function Chat() {
   }, []);
 
   /**
-   * Normalfall: Conversation pro User + Stadt laden oder anlegen
-   * Wichtig: wenn pendingCityId == selectedCity (Schnellstart),
-   *          dann NICHT hier laden, sondern der Schnellstart-Effect übernimmt.
+   * Conversation laden:
+   * - FALL A (Schnellstart): forceNewConversation = true
+   *     -> immer neue Conversation für quickstartCityId anlegen
+   * - FALL B (normal): Conversation für user + selectedCity laden oder erstellen
    */
   useEffect(() => {
     if (!user || !selectedCity) return;
-    if (pendingCityId && pendingCityId === selectedCity) return;
 
     let cancelled = false;
 
-    async function loadOrCreateConversation() {
+    async function loadConversation() {
       setLoadingConversation(true);
 
       try {
+        // FALL A: Schnellstart → forcierte neue Conversation
+        if (forceNewConversation && quickstartCityId && quickstartCityName) {
+          const { data: convo, error: createError } = await createConversation({
+            userId: user.id,
+            cityId: quickstartCityId,
+            title: quickstartCityName,
+          });
+
+          if (cancelled) return;
+
+          if (!createError && convo) {
+            const newConvId = Array.isArray(convo) ? convo[0].id : convo.id;
+
+            // neuen Kontext setzen
+            setConversationId(newConvId);
+            setSelectedCity(quickstartCityId);
+            setMessages([
+              {
+                role: "assistant",
+                text: "Hallo, was kann ich für dich tun?",
+              },
+            ]);
+
+            // Auto-Nachricht in genau diese neue Conversation
+            await sendText(
+              `Bitte starte eine vollständige Analyse für ${quickstartCityName}. Erzeuge anschließend den PDF-Output.`,
+              newConvId,
+              quickstartCityName
+            );
+
+            // ?city & new aus der URL entfernen
+            if (typeof window !== "undefined") {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("city");
+              url.searchParams.delete("new");
+              window.history.replaceState(
+                {},
+                "",
+                url.pathname + url.search
+              );
+            }
+          }
+
+          // Schnellstart-Flag zurücksetzen
+          if (!cancelled) {
+            setForceNewConversation(false);
+            setQuickstartCityId(null);
+            setQuickstartCityName(null);
+          }
+
+          return;
+        }
+
+        // FALL B: normaler Modus → Conversation für User + Stadt
         const { data: convos, error: convError } = await fetchConversations(
           user.id,
           selectedCity
@@ -224,10 +288,11 @@ export default function Chat() {
 
         if (!convError && convos && convos.length > 0) {
           const convo = convos[0];
-          setConversationId(convo.id);
+          const convId = convo.id;
+          setConversationId(convId);
 
           const { data: msgs, error: msgError } = await fetchMessages(
-            convo.id
+            convId
           );
           if (!msgError && msgs) {
             setMessages(
@@ -245,7 +310,8 @@ export default function Chat() {
           });
 
           if (!createError && convo) {
-            setConversationId(convo.id);
+            const newConvId = Array.isArray(convo) ? convo[0].id : convo.id;
+            setConversationId(newConvId);
             setMessages([
               {
                 role: "assistant",
@@ -261,82 +327,12 @@ export default function Chat() {
       }
     }
 
-    loadOrCreateConversation();
+    loadConversation();
 
     return () => {
       cancelled = true;
     };
-  }, [user, selectedCity, pendingCityId]);
-
-  /**
-   * Schnellstart-Flow:
-   * - wenn pendingCityId gesetzt ist, wird IMMER eine neue Conversation angelegt
-   * - Auto-Nachricht geht in diese neue Conversation
-   */
-  useEffect(() => {
-    if (!user) return;
-    if (!pendingCityId || !pendingCityName) return;
-
-    let cancelled = false;
-
-    async function runQuickstart() {
-      setLoadingConversation(true);
-
-      try {
-        const { data: convo, error: createError } = await createConversation({
-          userId: user.id,
-          cityId: pendingCityId,
-          title: pendingCityName,
-        });
-
-        if (cancelled) return;
-
-        if (!createError && convo) {
-          const newConvId = convo.id;
-
-          // neuen Kontext setzen
-          setConversationId(newConvId);
-          setSelectedCity(pendingCityId);
-          setMessages([
-            {
-              role: "assistant",
-              text: "Hallo, was kann ich für dich tun?",
-            },
-          ]);
-
-          // Auto-Nachricht in genau diese neue Conversation
-          await sendText(
-            `Bitte starte eine vollständige Analyse für ${pendingCityName}. Erzeuge anschließend den PDF-Output.`,
-            newConvId,
-            pendingCityName
-          );
-
-          // ?city aus der URL entfernen
-          if (typeof window !== "undefined") {
-            const url = new URL(window.location.href);
-            url.searchParams.delete("city");
-            window.history.replaceState(
-              {},
-              "",
-              url.pathname + url.search
-            );
-          }
-        }
-      } finally {
-        if (!cancelled) {
-          setPendingCityId(null);
-          setPendingCityName(null);
-          setLoadingConversation(false);
-        }
-      }
-    }
-
-    runQuickstart();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, pendingCityId, pendingCityName]);
+  }, [user, selectedCity, forceNewConversation, quickstartCityId, quickstartCityName]);
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
