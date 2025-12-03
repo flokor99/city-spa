@@ -22,15 +22,18 @@ export default function Chat() {
 
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-    // Hilfsfunktion: Namen der aktuell gewählten Stadt finden
+
+  // wird gesetzt, wenn /chat?city=Name aufgerufen wird
+  const [pendingCity, setPendingCity] = useState(null);
+
+  const statusMsg =
+    'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
+
+  // Namen der aktuell gewählten Stadt finden
   const getSelectedCityName = () => {
     const cityObj = cities.find((c) => c.id === selectedCity);
     return cityObj ? cityObj.name : null;
   };
-
-
-  const statusMsg =
-    'Ihre Analyse wird erstellt und erscheint in Kürze unter dem Menüpunkt "Dokumente". Dieser Vorgang kann einige Minuten dauern. Bitte haben Sie Geduld.';
 
   const getReplyText = (d) =>
     (typeof d?.reply === "string" && d.reply) ||
@@ -40,7 +43,7 @@ export default function Chat() {
     d?.text ||
     "…";
 
-   const sendText = async (text) => {
+  const sendText = async (text) => {
     const t = text.trim();
     if (!t || busy) return;
 
@@ -102,7 +105,8 @@ export default function Chat() {
       if (
         d?.accepted === true ||
         d?.status === "Accepted" ||
-        (typeof d?.reply === "string" && d.reply.toLowerCase() === "accepted")
+        (typeof d?.reply === "string" &&
+          d.reply.toLowerCase() === "accepted")
       ) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
@@ -127,33 +131,48 @@ export default function Chat() {
     }
   };
 
-
   const onSubmit = (e) => {
     e.preventDefault();
     sendText(input);
     setInput("");
   };
 
-  // Auto-Start, wenn ?city=… in der URL steht
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const city = params.get("city");
-    if (city) {
-      sendText(
-        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`
-      );
-      window.history.replaceState({}, "", "/chat");
-    }
-  }, []);
-
-  // Städte laden
+  // Städte laden und ggf. Stadt aus ?city=... vorauswählen
   useEffect(() => {
     async function loadCities() {
       const { data, error } = await fetchCities();
       if (!error && data) {
         setCities(data);
-        if (data.length > 0) setSelectedCity(data[0].id);
+
+        let initialCityId = null;
+        let pendingName = null;
+
+        if (typeof window !== "undefined") {
+          const params = new URLSearchParams(window.location.search);
+          const cityParam = params.get("city");
+          if (cityParam) {
+            const match = data.find(
+              (c) =>
+                c.name &&
+                c.name.toLowerCase() === cityParam.toLowerCase()
+            );
+            if (match) {
+              initialCityId = match.id;
+              pendingName = match.name;
+            }
+          }
+        }
+
+        if (!initialCityId && data.length > 0) {
+          initialCityId = data[0].id;
+        }
+
+        if (initialCityId) {
+          setSelectedCity(initialCityId);
+        }
+        if (pendingName) {
+          setPendingCity(pendingName);
+        }
       }
     }
     loadCities();
@@ -166,7 +185,6 @@ export default function Chat() {
     async function loadOrCreateConversation() {
       setLoadingConversation(true);
 
-      // 1. gibt es schon eine Conversation für diesen User + diese Stadt
       const { data: convos, error: convError } = await fetchConversations(
         user.id,
         selectedCity
@@ -176,7 +194,9 @@ export default function Chat() {
         const convo = convos[0];
         setConversationId(convo.id);
 
-        const { data: msgs, error: msgError } = await fetchMessages(convo.id);
+        const { data: msgs, error: msgError } = await fetchMessages(
+          convo.id
+        );
         if (!msgError && msgs) {
           setMessages(
             msgs.map((m) => ({
@@ -186,7 +206,6 @@ export default function Chat() {
           );
         }
       } else {
-        // 2. neue Conversation anlegen
         const { data: convo, error: createError } = await createConversation({
           userId: user.id,
           cityId: selectedCity,
@@ -209,6 +228,34 @@ export default function Chat() {
 
     loadOrCreateConversation();
   }, [user, selectedCity]);
+
+  // Schnellstart: wenn pendingCity gesetzt ist und Conversation geladen wurde,
+  // eine Auto-Nachricht in genau diese Conversation schicken
+  useEffect(() => {
+    if (!pendingCity) return;
+    if (!conversationId) return;
+
+    async function runAutoStart() {
+      await sendText(
+        `Bitte starte eine vollständige Analyse für ${pendingCity}. Erzeuge anschließend den PDF-Output.`
+      );
+
+      // ?city aus der URL entfernen
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("city");
+        window.history.replaceState(
+          {},
+          "",
+          url.pathname + url.search
+        );
+      }
+
+      setPendingCity(null);
+    }
+
+    runAutoStart();
+  }, [pendingCity, conversationId]);
 
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -275,7 +322,10 @@ export default function Chat() {
 
       <div
         className="rounded-2xl border"
-        style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
+        style={{
+          borderColor: "var(--cp-line)",
+          background: "#F7F8FA",
+        }}
       >
         {/* Nachrichten */}
         <div className="p-4 h-[56vh] overflow-y-auto">
@@ -290,7 +340,10 @@ export default function Chat() {
         <form
           onSubmit={onSubmit}
           className="p-3 border-t flex gap-2 items-center"
-          style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
+          style={{
+            borderColor: "var(--cp-line)",
+            background: "var(--cp-bg)",
+          }}
         >
           <input
             type="text"
