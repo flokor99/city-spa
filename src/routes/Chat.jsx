@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+// src/routes/Chat.jsx
+import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { useAuth } from "../AuthContext.jsx";
 import {
   fetchCities,
-  fetchConversations,
-  createConversation,
   fetchMessages,
   addMessage,
   getOrCreateCityByName,
@@ -18,7 +17,7 @@ export default function Chat() {
     { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
   ]);
   const [cities, setCities] = useState([]);
-  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedCity, setSelectedCity] = useState(""); // city_id
   const [conversationId, setConversationId] = useState(null);
   const [loadingConversation, setLoadingConversation] = useState(true);
 
@@ -27,8 +26,6 @@ export default function Chat() {
 
   const [urlCity, setUrlCity] = useState(null); // Stadt aus ?city=
   const [hasAutoStarted, setHasAutoStarted] = useState(false);
-
-  const lastSelectedCityRef = useRef("");
 
   const getSelectedCityName = () => {
     const cityObj = cities.find((c) => c.id === selectedCity);
@@ -138,7 +135,7 @@ export default function Chat() {
     }
   }, []);
 
-   // Städte laden + ggf. Stadt aus Schnellstart anlegen / auswählen
+  // Städte laden + ggf. Stadt aus Schnellstart anlegen / auswählen
   useEffect(() => {
     async function initCities() {
       let targetCityId = null;
@@ -176,36 +173,6 @@ export default function Chat() {
     }
 
     initCities();
-  }, [urlCity]);
-
-
-        if (match) {
-          initialCityId = match.id;
-        } else {
-          // noch nicht vorhanden. in Supabase anlegen
-          const { data: newCity, error: cityErr } = await getOrCreateCityByName(
-            urlCity
-          );
-          if (!cityErr && newCity) {
-            const alreadyInList = list.some((c) => c.id === newCity.id);
-            if (!alreadyInList) {
-              list = [...list, newCity];
-            }
-            initialCityId = newCity.id;
-          }
-        }
-      } else if (list.length > 0) {
-        initialCityId = list[0].id;
-      }
-
-      setCities(list);
-      if (initialCityId) {
-        setSelectedCity(initialCityId);
-        lastSelectedCityRef.current = initialCityId;
-      }
-    }
-
-    loadCities();
   }, [urlCity]);
 
   // Conversation laden oder erstellen, sobald User und Stadt klar sind
@@ -271,7 +238,7 @@ export default function Chat() {
     );
   }, [urlCity, conversationId, hasAutoStarted]);
 
-  // Wechsel im Dropdown inklusive "Neue Stadt" Option
+  // Wechsel im Dropdown inkl. "Neue Stadt" Option
   const handleCityChange = async (e) => {
     const value = e.target.value;
 
@@ -281,7 +248,6 @@ export default function Chat() {
         "Für welche Stadt soll ein neuer Chat angelegt werden?"
       );
       if (!name || !name.trim()) {
-        // nichts ändern, Auswahl bleibt auf der vorherigen Stadt
         return;
       }
 
@@ -300,13 +266,11 @@ export default function Chat() {
       });
 
       setSelectedCity(city.id);
-      lastSelectedCityRef.current = city.id;
       return;
     }
 
     // normaler Wechsel
     setSelectedCity(value);
-    lastSelectedCityRef.current = value;
   };
 
   const Bubble = ({ role, children }) => {
