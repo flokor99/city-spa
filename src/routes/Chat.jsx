@@ -133,46 +133,27 @@ export default function Chat() {
     }
   }, []);
 
-   // Städte laden + ggf. Stadt aus Schnellstart anlegen / auswählen
+  // Städte laden + Schnellstart-Stadt auswählen
   useEffect(() => {
-    async function initCities() {
-      let targetCityId = null;
+    async function loadCities() {
+      const { data, error } = await fetchCities();
+      if (!error && data) {
+        setCities(data);
 
-      // 1. Wenn Schnellstart genutzt wurde. Stadt in Supabase holen/erstellen
-      if (urlCity) {
-        const { data: targetCity, error: cityError } =
-          await getOrCreateCityByName(urlCity);
-
-        if (cityError) {
-          console.error("Fehler beim Anlegen/Finden der Stadt:", cityError);
-        } else if (targetCity) {
-          targetCityId = targetCity.id;
+        if (data.length > 0) {
+          if (urlCity) {
+            const match = data.find(
+              (c) => c.name.toLowerCase() === urlCity.toLowerCase()
+            );
+            setSelectedCity(match ? match.id : data[0].id);
+          } else {
+            setSelectedCity(data[0].id);
+          }
         }
       }
-
-      // 2. Alle Städte laden (inkl. eventuell gerade neu angelegter)
-      const { data, error } = await fetchCities();
-      if (error) {
-        console.error("Fehler beim Laden der Städte:", error);
-        return;
-      }
-
-      const list = data || [];
-      setCities(list);
-
-      // 3. Auswahl setzen
-      if (targetCityId) {
-        // Stadt aus Schnellstart auswählen
-        setSelectedCity(targetCityId);
-      } else if (list.length > 0) {
-        // Standard. erste Stadt
-        setSelectedCity(list[0].id);
-      }
     }
-
-    initCities();
+    loadCities();
   }, [urlCity]);
-
 
   // Conversation laden/erstellen
   useEffect(() => {
