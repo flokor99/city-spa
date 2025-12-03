@@ -24,7 +24,22 @@ export default function Chat() {
       });
 
       const raw = await res.text();
-      setMessages((m) => [...m, { role: "assistant", text: raw }]);
+      let data;
+
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { reply: raw }; // fallback
+      }
+
+      const reply =
+        data.reply ||
+        data.message ||
+        data.text ||
+        raw ||
+        "Keine Antwort erhalten";
+
+      setMessages((m) => [...m, { role: "assistant", text: reply }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: "ERROR: " + err }]);
     } finally {
@@ -33,9 +48,8 @@ export default function Chat() {
   };
 
   return (
-    <AppShell title="Chat-Test">
-      <h2>Minimaler Chat-Test</h2>
-      <p>Hier testen wir nur, ob die Netlify-Function antwortet.</p>
+    <AppShell title="Chat-Test-2">
+      <h2>Chat Test — JSON + Text</h2>
 
       <div
         style={{
@@ -43,13 +57,13 @@ export default function Chat() {
           padding: "1rem",
           height: "50vh",
           overflowY: "auto",
-          marginBottom: "1rem"
+          marginBottom: "1rem",
         }}
       >
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: "1rem" }}>
             <strong>{m.role === "user" ? "Du" : "Agent"}:</strong>
-            <div>{m.text}</div>
+            <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
           </div>
         ))}
       </div>
@@ -61,9 +75,7 @@ export default function Chat() {
           placeholder="Nachricht..."
           style={{ flex: 1, padding: "0.5rem" }}
         />
-        <button disabled={busy} style={{ padding: "0.5rem 1rem" }}>
-          Senden
-        </button>
+        <button disabled={busy}>Senden</button>
       </form>
     </AppShell>
   );
