@@ -1,5 +1,5 @@
 // src/routes/Chat.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "../components/AppShell.jsx";
 
 export default function Chat() {
@@ -9,10 +9,13 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Schnellstart
+  const [urlCity, setUrlCity] = useState(null);
+  const [autoInserted, setAutoInserted] = useState(false);
+
   const statusMsg =
     'Ihre Anfrage wird verarbeitet. Falls es sich um eine Analyse handelt, erscheint das fertige Dokument in Kürze unter "Dokumente". Bitte etwas Geduld.';
 
-  // Hilfsfunktion für Antwortextraktion
   const extractReply = (data, raw) =>
     data?.reply ||
     data?.message ||
@@ -20,6 +23,9 @@ export default function Chat() {
     raw ||
     "…";
 
+  // -------------------------------------------
+  // Nachricht senden
+  // -------------------------------------------
   const sendMessage = async (e) => {
     e.preventDefault();
     const text = input.trim();
@@ -36,19 +42,20 @@ export default function Chat() {
       const res = await fetch("/.netlify/functions/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({
+          message: text,
+          city: urlCity || null,
+        }),
         signal: controller.signal,
       });
 
       clearTimeout(timeout);
 
-      // Analyse angenommen
       if (res.status === 202) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
       }
 
-      // Normale Antwort
       const raw = await res.text();
       let data = null;
       try {
@@ -69,7 +76,6 @@ export default function Chat() {
       }
 
       const reply = extractReply(data, raw);
-
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
@@ -78,7 +84,36 @@ export default function Chat() {
     }
   };
 
-  // UI Bubble
+  // -------------------------------------------
+  // Schnellstart aus URL lesen (?city=Köln)
+  // -------------------------------------------
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const c = params.get("city");
+
+    if (c) {
+      setUrlCity(c);
+      window.history.replaceState({}, "", "/chat");
+    }
+  }, []);
+
+  // -------------------------------------------
+  // Wenn URL-Stadt gesetzt → Auto-Start-Text ins Input-Feld
+  // -------------------------------------------
+  useEffect(() => {
+    if (!urlCity) return;
+    if (autoInserted) return;
+
+    setInput(
+      `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
+    );
+
+    setAutoInserted(true);
+  }, [urlCity, autoInserted]);
+
+  // -------------------------------------------
+  // UI
+  // -------------------------------------------
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
     return (
