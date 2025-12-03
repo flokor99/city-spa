@@ -8,7 +8,7 @@ import {
   createConversation,
   fetchMessages,
   addMessage,
-  getOrCreateCityByName, // neu
+  getOrCreateCityByName, // neu: Stadt per Namen holen/anlegen
 } from "../supabaseData";
 
 export default function Chat() {
@@ -44,6 +44,7 @@ export default function Chat() {
     d?.text ||
     "…";
 
+  // *** DEIN ursprüngliches sendText – unverändert ***
   const sendText = async (text) => {
     const t = text.trim();
     if (!t || busy) return;
@@ -51,23 +52,18 @@ export default function Chat() {
     setMessages((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
 
-    // Timeout. wenn keine „normale“ Antwort kommt, zeigen wir nach 25s den Status
-    const statusTimeoutId = setTimeout(() => {
-      setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
-    }, 25000);
+    if (conversationId && user) {
+      await addMessage({
+        conversationId,
+        userId: user.id,
+        role: "user",
+        content: t,
+      });
+    }
 
     try {
-      if (conversationId && user) {
-        await addMessage({
-          conversationId,
-          userId: user.id,
-          role: "user",
-          content: t,
-        });
-      }
-
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 30000);
+      const timer = setTimeout(() => controller.abort(), 30000);
 
       const cityName = getSelectedCityName();
 
@@ -82,30 +78,28 @@ export default function Chat() {
         body: JSON.stringify(payload),
         signal: controller.signal,
       });
-      clearTimeout(abortTimer);
+      clearTimeout(timer);
+
+      if (r.status === 202) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        return;
+      }
 
       if (!r.ok) {
-        console.error("Chat Funktion Fehlerstatus:", r.status);
-        // Kein sofortiger Status. Timeout übernimmt es
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
       }
 
       const d = await r.json();
 
-      const isAccepted =
-        r.status === 202 ||
+      if (
         d?.accepted === true ||
         d?.status === "Accepted" ||
-        (typeof d?.reply === "string" &&
-          d.reply.toLowerCase() === "accepted");
-
-      if (isAccepted) {
-        // Analyse wurde angenommen. wir lassen den Timeout laufen
+        (typeof d?.reply === "string" && d.reply.toLowerCase() === "accepted")
+      ) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         return;
       }
-
-      // Normale Antwort. Status Timeout abbrechen
-      clearTimeout(statusTimeoutId);
 
       const replyText = getReplyText(d);
       setMessages((m) => [...m, { role: "assistant", text: replyText }]);
@@ -119,11 +113,8 @@ export default function Chat() {
         });
       }
     } catch (err) {
-      console.error("Fehler im sendText:", err);
-      // Timeout zeigt Status an
+      setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
     } finally {
-      // Falls schon eine Antwort kam, ist der Timeout bereits gecleart
-      // Falls nicht, soll er weiterlaufen
       setBusy(false);
     }
   };
@@ -149,12 +140,12 @@ export default function Chat() {
   useEffect(() => {
     async function loadCities() {
       const { data, error } = await fetchCities();
-      if (error) {
+      if (error || !data) {
         console.error("Fehler beim Laden der Städte:", error);
         return;
       }
 
-      let list = data || [];
+      let list = data;
       let initialCityId = null;
 
       if (urlCity) {
@@ -162,16 +153,20 @@ export default function Chat() {
         const match = list.find((c) => c.name.toLowerCase() === lower);
 
         if (match) {
+          // Stadt existiert schon
           initialCityId = match.id;
         } else {
-          // noch nicht vorhanden. in Supabase anlegen
+          // Stadt gibt es noch nicht. in Supabase anlegen
           const { data: newCity, error: cityErr } = await getOrCreateCityByName(
             urlCity
           );
           if (!cityErr && newCity) {
-            const exists = list.some((c) => c.id === newCity.id);
-            if (!exists) list = [...list, newCity];
+            if (!list.some((c) => c.id === newCity.id)) {
+              list = [...list, newCity];
+            }
             initialCityId = newCity.id;
+          } else if (list.length > 0) {
+            initialCityId = list[0].id;
           }
         }
       } else if (list.length > 0) {
@@ -236,19 +231,19 @@ export default function Chat() {
     loadOrCreateConversation();
   }, [user, selectedCity, cities]);
 
-  // Schnellstart. sobald Conversation bereit ist, Text NUR ins Eingabefeld schreiben
+  // Schnellstart auslösen, sobald Conversation bereit ist
   useEffect(() => {
     if (!urlCity) return;
     if (!conversationId) return;
     if (hasAutoStarted) return;
 
     setHasAutoStarted(true);
-    setInput(
+    sendText(
       `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
     );
   }, [urlCity, conversationId, hasAutoStarted]);
 
-  // Wechsel im Dropdown inkl. „+ Neue Stadt…“
+  // Dropdown-Wechsel inkl. „+ Neue Stadt…“
   const handleCityChange = async (e) => {
     const value = e.target.value;
 
