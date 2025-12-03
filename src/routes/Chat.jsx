@@ -24,8 +24,8 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const [urlCity, setUrlCity] = useState(null); // Stadt aus ?city=
-  const [hasAutoStarted, setHasAutoStarted] = useState(false);
+  const [urlCity, setUrlCity] = useState(null);         // Stadt aus ?city=
+  const [autoMessage, setAutoMessage] = useState(null); // Text für Schnellstart
 
   const getSelectedCityName = () => {
     const cityObj = cities.find((c) => c.id === selectedCity);
@@ -123,14 +123,17 @@ export default function Chat() {
     setInput("");
   };
 
-  // Stadt aus URL lesen
+  // Stadt und Auto Text aus URL lesen
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const city = params.get("city");
     if (city) {
       setUrlCity(city);
-      // URL aufräumen, damit /chat sauber ist
+      setAutoMessage(
+        `Bitte starte eine vollständige Analyse für ${city}. Erzeuge anschließend den PDF-Output.`
+      );
+      // URL säubern
       window.history.replaceState({}, "", "/chat");
     }
   }, []);
@@ -140,7 +143,7 @@ export default function Chat() {
     async function initCities() {
       let targetCityId = null;
 
-      // wenn Schnellstart genutzt wurde. Stadt in Supabase holen oder anlegen
+      // Stadt aus Schnellstart in Supabase holen oder anlegen
       if (urlCity) {
         const { data: targetCity, error: cityError } =
           await getOrCreateCityByName(urlCity);
@@ -152,7 +155,6 @@ export default function Chat() {
         }
       }
 
-      // alle Städte laden
       const { data, error } = await fetchCities();
       if (error) {
         console.error("Fehler beim Laden der Städte:", error);
@@ -206,7 +208,6 @@ export default function Chat() {
       const { data: msgs, error: msgError } = await fetchMessages(convo.id);
 
       if (!msgError && msgs && msgs.length > 0) {
-        // vorhandene Nachrichten aus DB immer anzeigen
         setMessages(
           msgs.map((m) => ({
             role: m.role,
@@ -214,34 +215,25 @@ export default function Chat() {
           }))
         );
       } else {
-        // nur Begrüßung setzen, wenn kein Auto Schnellstart ansteht
-        if (!urlCity || hasAutoStarted) {
-          setMessages([
-            { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
-          ]);
-        }
+        setMessages([
+          { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+        ]);
       }
 
       setLoadingConversation(false);
     }
 
     loadOrCreateConversation();
-  }, [user, selectedCity, cities, urlCity, hasAutoStarted]);
+  }, [user, selectedCity, cities]);
 
-  // Schnellstart auslösen, sobald Conversation bereit ist
+  // Wenn wir aus Schnellstart kommen. Auto Text ins Eingabefeld legen, aber nicht automatisch senden
   useEffect(() => {
-    if (!urlCity) return;
+    if (!autoMessage) return;
     if (!conversationId) return;
-    if (hasAutoStarted) return;
 
-    setHasAutoStarted(true);
-    // Nachricht schicken
-    sendText(
-      `Bitte starte eine vollständige Analyse für ${urlCity}. Erzeuge anschließend den PDF-Output.`
-    );
-    // danach urlCity leeren, damit spätere Stadt Wechsel normal laufen
-    setUrlCity(null);
-  }, [urlCity, conversationId, hasAutoStarted]);
+    setInput(autoMessage);
+    setAutoMessage(null);
+  }, [autoMessage, conversationId]);
 
   // Wechsel im Dropdown inkl neue Stadt
   const handleCityChange = async (e) => {
