@@ -7,13 +7,12 @@ export default function App() {
   const [city, setCity] = useState("");
 
   const startAnalysis = (e) => {
-  e.preventDefault();
-  const c = city.trim();
-  if (!c) return;
-  // new=1 signalisiert dem Chat: bitte neue Conversation anlegen
-  navigate(`/chat?city=${encodeURIComponent(c)}&new=1`);
-};
-
+    e.preventDefault();
+    const c = city.trim();
+    if (!c) return;
+    // quick=1 signalisiert dem Chat: Schnellstart mit Auto-Prompt
+    navigate(`/chat?city=${encodeURIComponent(c)}&quick=1`);
+  };
 
   const Card = ({ href, title, desc, img }) => (
     <a
@@ -57,14 +56,14 @@ export default function App() {
           <div className="md:col-span-2">
             <h1 className="cp-h1 mb-2x">Willkommen</h1>
             <p className="cp-body">
-              Der <strong>Ströer City Profiler</strong> ordnet Städte anhand von vier
-              Zukunftsszenarien ein, welche im Rahmen der Foresight Academy entstanden sind.
-              Er vergleicht die aktuelle Position und Entwicklung einer Stadt mit
-              der kommunizierten Zielrichtung – und macht daraus konkreten
-              Handlungsbedarf sichtbar. Zudem liefert er Ideen und bewertet deren
-              Wirkung zur Zielerreichung.{" "}
-              So unterstützt er die Kommunikation mit der Stadt und trägt dazu bei,
-              Ströer als strategischen Partner zu positionieren.
+              Der <strong>Ströer City Profiler</strong> ordnet Städte anhand von
+              vier Zukunftsszenarien ein, welche im Rahmen der Foresight Academy
+              entstanden sind. Er vergleicht die aktuelle Position und
+              Entwicklung einer Stadt mit der kommunizierten Zielrichtung. und
+              macht daraus konkreten Handlungsbedarf sichtbar. Zudem liefert er
+              Ideen und bewertet deren Wirkung zur Zielerreichung.{" "}
+              So unterstützt er die Kommunikation mit der Stadt und trägt dazu
+              bei, Ströer als strategischen Partner zu positionieren.
             </p>
           </div>
 
