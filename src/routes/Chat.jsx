@@ -7,6 +7,7 @@ import {
   createConversation,
   fetchMessages,
   addMessage,
+  getOrCreateCityByName,
 } from "../supabaseData";
 
 export default function Chat() {
@@ -18,11 +19,13 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // Schnellstart
-  const [urlCity, setUrlCity] = useState(null);
+  // Stadt aus URL (Name) und dazugehörige ID aus DB
+  const [urlCity, setUrlCity] = useState(null); // z.B. "Hamburg"
+  const [cityId, setCityId] = useState(null);   // UUID aus cities
+  const [cityName, setCityName] = useState(null);
+
   const [autoInserted, setAutoInserted] = useState(false);
 
-  // Conversation aus der DB
   const [conversationId, setConversationId] = useState(null);
   const [loadingConversation, setLoadingConversation] = useState(true);
 
@@ -33,7 +36,7 @@ export default function Chat() {
     data?.reply || data?.message || data?.text || raw || "…";
 
   // -------------------------------------------
-  // Schnellstart aus URL lesen (?city=Köln)
+  // Stadtname aus URL lesen (?city=Köln)
   // -------------------------------------------
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -42,13 +45,45 @@ export default function Chat() {
     if (c) {
       setUrlCity(c);
       window.history.replaceState({}, "", "/chat");
+    } else {
+      setUrlCity(null);
     }
   }, []);
 
   // -------------------------------------------
+  // Aus Stadtname → cityId (cities-Tabelle)
+  // nutzt dein getOrCreateCityByName
+  // -------------------------------------------
+  useEffect(() => {
+    const resolveCity = async () => {
+      if (!urlCity) {
+        setCityId(null);
+        setCityName(null);
+        return;
+      }
+
+      try {
+        const { data, error } = await getOrCreateCityByName(urlCity);
+        if (error) {
+          console.error("getOrCreateCityByName error", error);
+          return;
+        }
+        if (data) {
+          setCityId(data.id);
+          setCityName(data.name);
+        }
+      } catch (err) {
+        console.error("resolveCity error", err);
+      }
+    };
+
+    resolveCity();
+  }, [urlCity]);
+
+  // -------------------------------------------
   // Conversation + Nachrichten aus Supabase laden
-  // pro User. wir nehmen einfach die letzte Conversation
-  // oder erzeugen eine neue
+  // genau eine Conversation pro (user, city_id)
+  // cityId kann auch null sein → allgemeiner Chat
   // -------------------------------------------
   useEffect(() => {
     const initConversation = async () => {
@@ -57,8 +92,22 @@ export default function Chat() {
         return;
       }
 
-      // 1. vorhandene Conversations holen
-      const { data: convs, error } = await fetchConversations(user.id);
+      // Während wir auf cityId warten, nichts tun
+      // (sonst würden wir erst eine Conversation ohne city_id erstellen)
+      if (urlCity && !cityId) {
+        // Stadt aus URL, aber cityId noch nicht aufgelöst
+        return;
+      }
+
+      setLoadingConversation(true);
+      setMessages([
+        { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
+      ]);
+
+      const { data: convs, error } = await fetchConversations(
+        user.id,
+        cityId || null
+      );
 
       if (error) {
         console.error("fetchConversations error", error);
@@ -66,12 +115,12 @@ export default function Chat() {
 
       let conv = convs && convs.length > 0 ? convs[0] : null;
 
-      // 2. falls keine Conversation vorhanden, neue anlegen
+      // falls keine Conversation vorhanden, neue anlegen
       if (!conv) {
         const { data: newConv, error: createError } = await createConversation({
           userId: user.id,
-          cityId: null, // fürs erste ignorieren wir die Stadtbindung
-          title: urlCity || "Chat",
+          cityId: cityId || null,
+          title: cityName || urlCity || "Chat",
         });
 
         if (createError) {
@@ -85,7 +134,7 @@ export default function Chat() {
 
       setConversationId(conv.id);
 
-      // 3. Nachrichten zu dieser Conversation laden
+      // Nachrichten zu dieser Conversation laden
       const { data: msgs, error: msgError } = await fetchMessages(conv.id);
 
       if (msgError) {
@@ -100,11 +149,9 @@ export default function Chat() {
           }))
         );
       } else {
-        // keine Messages gespeichert, Standard-Begrüßung
         const welcome = "Hallo, was kann ich für dich tun?";
         setMessages([{ role: "assistant", text: welcome }]);
 
-        // optional auch in der DB speichern
         await addMessage({
           conversationId: conv.id,
           userId: user.id,
@@ -117,10 +164,10 @@ export default function Chat() {
     };
 
     initConversation();
-  }, [user, urlCity]);
+  }, [user, cityId, urlCity]);
 
   // -------------------------------------------
-  // Wenn URL Stadt gesetzt → Text ins Input-Feld
+  // Wenn URL-Stadt gesetzt → Auto-Start-Text ins Input-Feld
   // -------------------------------------------
   useEffect(() => {
     if (!urlCity) return;
@@ -146,16 +193,14 @@ export default function Chat() {
       return;
     }
     if (!conversationId) {
-      console.error("Kein conversationId gesetzt. Conversation konnte nicht geladen werden.");
+      console.error("Kein conversationId gesetzt.");
       return;
     }
 
-    // 1. User Nachricht direkt im UI anzeigen
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
     setBusy(true);
 
-    // 2. User Nachricht in Supabase speichern
     addMessage({
       conversationId,
       userId: user.id,
@@ -172,8 +217,9 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          city: urlCity || null,
-          conversationId, // Backend kann das nutzen, ignoriert es sonst einfach
+          city: urlCity || null, // bisherige Logik bleibt
+          cityId: cityId || null, // optionaler Zusatz für späteres Backend
+          conversationId,
         }),
         signal: controller.signal,
       });
