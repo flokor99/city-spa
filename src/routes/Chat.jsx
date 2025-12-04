@@ -29,6 +29,9 @@ export default function Chat() {
   const [conversationId, setConversationId] = useState(null);
   const [loadingConversation, setLoadingConversation] = useState(true);
 
+  // alle Conversations des Users für die Sidebar
+  const [conversations, setConversations] = useState([]);
+
   const statusMsg =
     'Ihre Anfrage wird verarbeitet. Falls es sich um eine Analyse handelt, erscheint das fertige Dokument in Kürze unter "Dokumente". Bitte etwas Geduld.';
 
@@ -83,19 +86,18 @@ export default function Chat() {
   // -------------------------------------------
   // Conversation + Nachrichten aus Supabase laden
   // genau eine Conversation pro (user, city_id)
-  // cityId kann auch null sein → allgemeiner Chat
+  // und alle Conversations für die Sidebar
   // -------------------------------------------
   useEffect(() => {
     const initConversation = async () => {
       if (!user) {
         setLoadingConversation(false);
+        setConversations([]);
         return;
       }
 
-      // Während wir auf cityId warten, nichts tun
-      // (sonst würden wir erst eine Conversation ohne city_id erstellen)
+      // Wenn es eine Stadt aus der URL gibt, warten bis cityId da ist
       if (urlCity && !cityId) {
-        // Stadt aus URL, aber cityId noch nicht aufgelöst
         return;
       }
 
@@ -104,18 +106,18 @@ export default function Chat() {
         { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
       ]);
 
-      const { data: convs, error } = await fetchConversations(
+      // 1. Conversation für (user, cityId) holen/anlegen
+      const { data: convsForCity, error } = await fetchConversations(
         user.id,
         cityId || null
       );
 
       if (error) {
-        console.error("fetchConversations error", error);
+        console.error("fetchConversations (by city) error", error);
       }
 
-      let conv = convs && convs.length > 0 ? convs[0] : null;
+      let conv = convsForCity && convsForCity.length > 0 ? convsForCity[0] : null;
 
-      // falls keine Conversation vorhanden, neue anlegen
       if (!conv) {
         const { data: newConv, error: createError } = await createConversation({
           userId: user.id,
@@ -134,7 +136,7 @@ export default function Chat() {
 
       setConversationId(conv.id);
 
-      // Nachrichten zu dieser Conversation laden
+      // 2. Nachrichten zu dieser Conversation laden
       const { data: msgs, error: msgError } = await fetchMessages(conv.id);
 
       if (msgError) {
@@ -160,11 +162,21 @@ export default function Chat() {
         });
       }
 
+      // 3. Alle Conversations des Users für die Sidebar laden
+      const { data: allConvs, error: allError } = await fetchConversations(
+        user.id
+      );
+      if (allError) {
+        console.error("fetchConversations (all) error", allError);
+      } else if (allConvs) {
+        setConversations(allConvs);
+      }
+
       setLoadingConversation(false);
     };
 
     initConversation();
-  }, [user, cityId, urlCity]);
+  }, [user, cityId, urlCity, cityName]);
 
   // -------------------------------------------
   // Wenn URL-Stadt gesetzt → Auto-Start-Text ins Input-Feld
@@ -217,8 +229,8 @@ export default function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          city: urlCity || null, // bisherige Logik bleibt
-          cityId: cityId || null, // optionaler Zusatz für späteres Backend
+          city: urlCity || null,
+          cityId: cityId || null,
           conversationId,
         }),
         signal: controller.signal,
@@ -289,7 +301,7 @@ export default function Chat() {
   };
 
   // -------------------------------------------
-  // UI
+  // UI-Helfer: Bubble
   // -------------------------------------------
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -315,61 +327,119 @@ export default function Chat() {
     );
   };
 
+  // -------------------------------------------
+  // UI-Helfer: Label & Link für Conversations
+  // -------------------------------------------
+  const getConversationLabel = (conv) => {
+    if (conv.title) return conv.title;
+    if (conv.city_id) return "Stadt-Chat";
+    return "Allgemein";
+  };
+
+  const getConversationHref = (conv) => {
+    if (conv.city_id && conv.title) {
+      return `/chat?city=${encodeURIComponent(conv.title)}`;
+    }
+    return "/chat";
+  };
+
   return (
     <AppShell title="Chat">
       <a href="/" className="cp-small cp-link">
         ← Zurück
       </a>
 
-      <div
-        className="rounded-2xl border mt-4"
-        style={{
-          borderColor: "var(--cp-line)",
-          background: "#F7F8FA",
-        }}
-      >
-        <div className="p-4 h-[60vh] overflow-y-auto">
-          {loadingConversation ? (
-            <div className="cp-small text-[var(--cp-muted)]">
-              Lade bisherigen Chatverlauf…
-            </div>
-          ) : (
-            messages.map((m, i) => (
-              <Bubble key={i} role={m.role}>
-                {m.text}
-              </Bubble>
-            ))
-          )}
-        </div>
-
-        <form
-          onSubmit={sendMessage}
-          className="p-3 border-t flex gap-2 items-center"
+      <div className="mt-4 flex gap-4">
+        {/* Sidebar: Conversations-Auswahl */}
+        <div
+          className="w-60 rounded-2xl border p-3 cp-small"
           style={{
             borderColor: "var(--cp-line)",
             background: "var(--cp-bg)",
           }}
         >
-          <input
-            type="text"
-            placeholder={
-              user
-                ? "Nachricht…"
-                : "Bitte einloggen, um den Chat zu nutzen."
-            }
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="cp-input flex-1"
-            disabled={busy || loadingConversation || !user}
-          />
-          <button
-            type="submit"
-            disabled={busy || loadingConversation || !user}
-            className="cp-btn"
+          <div className="font-semibold mb-2">Deine Chats</div>
+          {user ? (
+            conversations.length === 0 ? (
+              <div className="text-[var(--cp-muted)]">
+                Es gibt noch keine Chats.
+              </div>
+            ) : (
+              <ul className="space-y-1">
+                {conversations.map((conv) => (
+                  <li key={conv.id}>
+                    <a
+                      href={getConversationHref(conv)}
+                      className={`block px-2 py-1 rounded-md border ${
+                        conv.id === conversationId
+                          ? "bg-[rgba(0,174,239,0.08)] border-[var(--cp-line)]"
+                          : "border-transparent hover:border-[var(--cp-line)]"
+                      }`}
+                    >
+                      {getConversationLabel(conv)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : (
+            <div className="text-[var(--cp-muted)]">
+              Bitte einloggen, um deine Chats zu sehen.
+            </div>
+          )}
+        </div>
+
+        {/* Hauptbereich: Chat */}
+        <div
+          className="flex-1 rounded-2xl border"
+          style={{
+            borderColor: "var(--cp-line)",
+            background: "#F7F8FA",
+          }}
+        >
+          <div className="p-4 h-[60vh] overflow-y-auto">
+            {loadingConversation ? (
+              <div className="cp-small text-[var(--cp-muted)]">
+                Lade bisherigen Chatverlauf…
+              </div>
+            ) : (
+              messages.map((m, i) => (
+                <Bubble key={i} role={m.role}>
+                  {m.text}
+                </Bubble>
+              ))
+            )}
+          </div>
+
+          <form
+            onSubmit={sendMessage}
+            className="p-3 border-t flex gap-2 items-center"
+            style={{
+              borderColor: "var(--cp-line)",
+              background: "var(--cp-bg)",
+            }}
           >
-            {busy ? "Senden…" : "Senden"}
-          </button>
-        </form>
+            <input
+              type="text"
+              placeholder={
+                user
+                  ? "Nachricht…"
+                  : "Bitte einloggen, um den Chat zu nutzen."
+              }
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="cp-input flex-1"
+              disabled={busy || loadingConversation || !user}
+            />
+            <button
+              type="submit"
+              disabled={busy || loadingConversation || !user}
+              className="cp-btn"
+            >
+              {busy ? "Senden…" : "Senden"}
+            </button>
+          </form>
+        </div>
       </div>
     </AppShell>
   );
