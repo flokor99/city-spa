@@ -24,6 +24,9 @@ export default function Chat() {
   const [cityId, setCityId] = useState(null);   // UUID aus cities
   const [cityName, setCityName] = useState(null);
 
+  // Quickstart-Flag aus URL (?quick=1)
+  const [isQuickStart, setIsQuickStart] = useState(false);
+
   const [autoInserted, setAutoInserted] = useState(false);
 
   const [conversationId, setConversationId] = useState(null);
@@ -32,6 +35,9 @@ export default function Chat() {
   // alle Conversations des Users für die Sidebar
   const [conversations, setConversations] = useState([]);
 
+  // Eingabefeld in der Sidebar für neuen Stadt-Chat
+  const [newCityInput, setNewCityInput] = useState("");
+
   const statusMsg =
     'Ihre Anfrage wird verarbeitet. Falls es sich um eine Analyse handelt, erscheint das fertige Dokument in Kürze unter "Dokumente". Bitte etwas Geduld.';
 
@@ -39,18 +45,22 @@ export default function Chat() {
     data?.reply || data?.message || data?.text || raw || "…";
 
   // -------------------------------------------
-  // Stadtname aus URL lesen (?city=Köln)
+  // Stadtname + Quickstart aus URL lesen (?city=Köln&quick=1)
   // -------------------------------------------
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const c = params.get("city");
+    const q = params.get("quick");
 
     if (c) {
       setUrlCity(c);
+      // URL auf /chat ohne Query zurücksetzen
       window.history.replaceState({}, "", "/chat");
     } else {
       setUrlCity(null);
     }
+
+    setIsQuickStart(q === "1" || q === "true");
   }, []);
 
   // -------------------------------------------
@@ -179,10 +189,11 @@ export default function Chat() {
   }, [user, cityId, urlCity, cityName]);
 
   // -------------------------------------------
-  // Wenn URL-Stadt gesetzt → Auto-Start-Text ins Input-Feld
+  // Quickstart-Autotext NUR wenn ?quick=1 gesetzt war
   // -------------------------------------------
   useEffect(() => {
     if (!urlCity) return;
+    if (!isQuickStart) return;
     if (autoInserted) return;
 
     setInput(
@@ -190,7 +201,7 @@ export default function Chat() {
     );
 
     setAutoInserted(true);
-  }, [urlCity, autoInserted]);
+  }, [urlCity, isQuickStart, autoInserted]);
 
   // -------------------------------------------
   // Nachricht senden
@@ -301,6 +312,17 @@ export default function Chat() {
   };
 
   // -------------------------------------------
+  // Sidebar: neuen Stadt-Chat anlegen
+  // -------------------------------------------
+  const handleNewCityChat = (e) => {
+    e.preventDefault();
+    const c = newCityInput.trim();
+    if (!c) return;
+    // bewusst ohne quick=1. kein Auto-Prompt
+    window.location.href = `/chat?city=${encodeURIComponent(c)}`;
+  };
+
+  // -------------------------------------------
   // UI-Helfer: Bubble
   // -------------------------------------------
   const Bubble = ({ role, children }) => {
@@ -352,7 +374,7 @@ export default function Chat() {
       <div className="mt-4 flex gap-4">
         {/* Sidebar: Conversations-Auswahl */}
         <div
-          className="w-60 rounded-2xl border p-3 cp-small"
+          className="w-72 rounded-2xl border p-3 cp-small flex flex-col gap-3"
           style={{
             borderColor: "var(--cp-line)",
             background: "var(--cp-bg)",
@@ -365,7 +387,7 @@ export default function Chat() {
                 Es gibt noch keine Chats.
               </div>
             ) : (
-              <ul className="space-y-1">
+              <ul className="space-y-1 max-h-60 overflow-y-auto pr-1">
                 {conversations.map((conv) => (
                   <li key={conv.id}>
                     <a
@@ -386,6 +408,22 @@ export default function Chat() {
             <div className="text-[var(--cp-muted)]">
               Bitte einloggen, um deine Chats zu sehen.
             </div>
+          )}
+
+          {/* Neuer Stadt-Chat */}
+          {user && (
+            <form onSubmit={handleNewCityChat} className="flex gap-2 mt-2">
+              <input
+                type="text"
+                placeholder="Neue Stadt…"
+                value={newCityInput}
+                onChange={(e) => setNewCityInput(e.target.value)}
+                className="cp-input flex-1"
+              />
+              <button type="submit" className="cp-btn cp-small">
+                Neu
+              </button>
+            </form>
           )}
         </div>
 
