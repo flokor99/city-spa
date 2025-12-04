@@ -65,7 +65,6 @@ export default function Chat() {
 
   // -------------------------------------------
   // Aus Stadtname → cityId (cities-Tabelle)
-  // nutzt dein getOrCreateCityByName
   // -------------------------------------------
   useEffect(() => {
     const resolveCity = async () => {
@@ -95,8 +94,6 @@ export default function Chat() {
 
   // -------------------------------------------
   // Conversation + Nachrichten aus Supabase laden
-  // genau eine Conversation pro (user, city_id)
-  // und alle Conversations für die Sidebar
   // -------------------------------------------
   useEffect(() => {
     const initConversation = async () => {
@@ -126,7 +123,8 @@ export default function Chat() {
         console.error("fetchConversations (by city) error", error);
       }
 
-      let conv = convsForCity && convsForCity.length > 0 ? convsForCity[0] : null;
+      let conv =
+        convsForCity && convsForCity.length > 0 ? convsForCity[0] : null;
 
       if (!conv) {
         const { data: newConv, error: createError } = await createConversation({
@@ -189,7 +187,7 @@ export default function Chat() {
   }, [user, cityId, urlCity, cityName]);
 
   // -------------------------------------------
-  // Quickstart-Autotext NUR wenn ?quick=1 gesetzt war
+  // Quickstart-Autotext nur wenn ?quick=1 war
   // -------------------------------------------
   useEffect(() => {
     if (!urlCity) return;
@@ -249,6 +247,7 @@ export default function Chat() {
 
       clearTimeout(timeout);
 
+      // 1) klassischer 202-Fall
       if (res.status === 202) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         addMessage({
@@ -256,7 +255,9 @@ export default function Chat() {
           userId: user.id,
           role: "assistant",
           content: statusMsg,
-        }).catch((err) => console.error("addMessage assistant 202 error", err));
+        }).catch((err) =>
+          console.error("addMessage assistant 202 error", err)
+        );
         return;
       }
 
@@ -268,6 +269,26 @@ export default function Chat() {
         data = { reply: raw };
       }
 
+      // 2) Netlify-/Lambda-Timeout → wie „Auftrag angenommen“ behandeln
+      const isTimeout =
+        data?.errorType === "Sandbox.Timeout" ||
+        (typeof data?.errorMessage === "string" &&
+          data.errorMessage.includes("Task timed out"));
+
+      if (isTimeout) {
+        setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
+        addMessage({
+          conversationId,
+          userId: user.id,
+          role: "assistant",
+          content: statusMsg,
+        }).catch((err) =>
+          console.error("addMessage assistant timeout error", err)
+        );
+        return;
+      }
+
+      // 3) normaler „Accepted“-Handshake deines Agents
       const isAccepted =
         data?.accepted === true ||
         data?.status === "Accepted" ||
@@ -287,6 +308,7 @@ export default function Chat() {
         return;
       }
 
+      // 4) echte Antwort anzeigen
       const reply = extractReply(data, raw);
 
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
