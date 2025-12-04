@@ -20,11 +20,11 @@ export default function Chat() {
   const [busy, setBusy] = useState(false);
 
   // Stadt aus URL (Name) und dazugehörige ID aus DB
-  const [urlCity, setUrlCity] = useState(null); // z.B. "Hamburg"
+  const [urlCity, setUrlCity] = useState(null); // z. B. "Hamburg"
   const [cityId, setCityId] = useState(null);   // UUID aus cities
   const [cityName, setCityName] = useState(null);
 
-  // Quickstart-Flag aus URL (?quick=1)
+  // Quickstart Flag aus URL (?quick=1)
   const [isQuickStart, setIsQuickStart] = useState(false);
 
   const [autoInserted, setAutoInserted] = useState(false);
@@ -35,7 +35,7 @@ export default function Chat() {
   // alle Conversations des Users für die Sidebar
   const [conversations, setConversations] = useState([]);
 
-  // Eingabefeld in der Sidebar für neuen Stadt-Chat
+  // Eingabefeld in der Sidebar für neuen Stadt Chat
   const [newCityInput, setNewCityInput] = useState("");
 
   const statusMsg =
@@ -64,7 +64,7 @@ export default function Chat() {
   }, []);
 
   // -------------------------------------------
-  // Aus Stadtname → cityId (cities-Tabelle)
+  // Aus Stadtname → cityId (cities Tabelle)
   // -------------------------------------------
   useEffect(() => {
     const resolveCity = async () => {
@@ -113,7 +113,7 @@ export default function Chat() {
         { role: "assistant", text: "Hallo, was kann ich für dich tun?" },
       ]);
 
-      // 1. Conversation für (user, cityId) holen/anlegen
+      // 1. Conversation für (user, cityId) holen oder anlegen
       const { data: convsForCity, error } = await fetchConversations(
         user.id,
         cityId || null
@@ -187,7 +187,7 @@ export default function Chat() {
   }, [user, cityId, urlCity, cityName]);
 
   // -------------------------------------------
-  // Quickstart-Autotext nur wenn ?quick=1 war
+  // Quickstart Autotext nur wenn ?quick=1 war
   // -------------------------------------------
   useEffect(() => {
     if (!urlCity) return;
@@ -247,7 +247,7 @@ export default function Chat() {
 
       clearTimeout(timeout);
 
-      // 1) klassischer 202-Fall
+      // 1) klassischer 202 Fall
       if (res.status === 202) {
         setMessages((m) => [...m, { role: "assistant", text: statusMsg }]);
         addMessage({
@@ -269,7 +269,7 @@ export default function Chat() {
         data = { reply: raw };
       }
 
-      // 2) Netlify-/Lambda-Timeout → wie „Auftrag angenommen“ behandeln
+      // 2) Netlify Timeout als "Accepted" behandeln
       const isTimeout =
         data?.errorType === "Sandbox.Timeout" ||
         (typeof data?.errorMessage === "string" &&
@@ -288,7 +288,7 @@ export default function Chat() {
         return;
       }
 
-      // 3) normaler „Accepted“-Handshake deines Agents
+      // 3) normaler Accepted Handshake
       const isAccepted =
         data?.accepted === true ||
         data?.status === "Accepted" ||
@@ -334,18 +334,18 @@ export default function Chat() {
   };
 
   // -------------------------------------------
-  // Sidebar: neuen Stadt-Chat anlegen
+  // Sidebar. neuen Stadt Chat anlegen
   // -------------------------------------------
   const handleNewCityChat = (e) => {
     e.preventDefault();
     const c = newCityInput.trim();
     if (!c) return;
-    // bewusst ohne quick=1. kein Auto-Prompt
+    // bewusst ohne quick=1. kein Auto Prompt
     window.location.href = `/chat?city=${encodeURIComponent(c)}`;
   };
 
   // -------------------------------------------
-  // UI-Helfer: Bubble
+  // UI Helfer. Bubble
   // -------------------------------------------
   const Bubble = ({ role, children }) => {
     const isUser = role === "user";
@@ -371,8 +371,30 @@ export default function Chat() {
     );
   };
 
+  // Tipp Indikator Bubble
+  const TypingIndicator = () => (
+    <div className="w-full flex justify-start my-2">
+      <div
+        className="max-w-[72ch] rounded-2xl px-4 py-3 border"
+        style={{
+          background: "var(--cp-bg)",
+          borderColor: "var(--cp-line)",
+        }}
+      >
+        <div className="cp-small mb-1x" style={{ color: "var(--cp-muted)" }}>
+          City Profiler
+        </div>
+        <div className="flex items-center gap-1 h-4">
+          <span className="cp-typing-dot" />
+          <span className="cp-typing-dot cp-typing-dot-delay1" />
+          <span className="cp-typing-dot cp-typing-dot-delay2" />
+        </div>
+      </div>
+    </div>
+  );
+
   // -------------------------------------------
-  // UI-Helfer: Label & Link für Conversations
+  // UI Helfer. Label & Link für Conversations
   // -------------------------------------------
   const getConversationLabel = (conv) => {
     if (conv.title) return conv.title;
@@ -389,12 +411,42 @@ export default function Chat() {
 
   return (
     <AppShell title="Chat">
+      {/* kleine CSS Animation für die drei Punkte */}
+      <style>
+        {`
+          .cp-typing-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--cp-muted);
+            display: inline-block;
+            animation: cp-typing-bounce 1.4s infinite ease-in-out both;
+          }
+          .cp-typing-dot-delay1 {
+            animation-delay: 0.2s;
+          }
+          .cp-typing-dot-delay2 {
+            animation-delay: 0.4s;
+          }
+          @keyframes cp-typing-bounce {
+            0%, 80%, 100% {
+              transform: scale(0.6);
+              opacity: 0.4;
+            }
+            40% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `}
+      </style>
+
       <a href="/" className="cp-small cp-link">
         ← Zurück
       </a>
 
       <div className="mt-4 flex gap-4">
-        {/* Sidebar: Conversations-Auswahl */}
+        {/* Sidebar. Conversations Auswahl */}
         <div
           className="w-72 rounded-2xl border p-3 cp-small flex flex-col gap-3"
           style={{
@@ -432,7 +484,7 @@ export default function Chat() {
             </div>
           )}
 
-          {/* Neuer Stadt-Chat */}
+          {/* Neuer Stadt Chat */}
           {user && (
             <form onSubmit={handleNewCityChat} className="flex gap-2 mt-2">
               <input
@@ -449,7 +501,7 @@ export default function Chat() {
           )}
         </div>
 
-        {/* Hauptbereich: Chat */}
+        {/* Hauptbereich. Chat */}
         <div
           className="flex-1 rounded-2xl border"
           style={{
@@ -463,11 +515,14 @@ export default function Chat() {
                 Lade bisherigen Chatverlauf…
               </div>
             ) : (
-              messages.map((m, i) => (
-                <Bubble key={i} role={m.role}>
-                  {m.text}
-                </Bubble>
-              ))
+              <>
+                {messages.map((m, i) => (
+                  <Bubble key={i} role={m.role}>
+                    {m.text}
+                  </Bubble>
+                ))}
+                {busy && <TypingIndicator />}
+              </>
             )}
           </div>
 
