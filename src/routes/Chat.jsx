@@ -8,7 +8,6 @@ import {
   fetchMessages,
   addMessage,
   getOrCreateCityByName,
-  deleteConversationAndMessages,
 } from "../supabaseData";
 
 export default function Chat() {
@@ -21,12 +20,9 @@ export default function Chat() {
   const [busy, setBusy] = useState(false);
 
   // Stadt aus URL (Name) und dazugehörige ID aus DB
-  const [urlCity, setUrlCity] = useState(null); // z.B. "Köln"
+  const [urlCity, setUrlCity] = useState(null); // z.B. "Hamburg"
   const [cityId, setCityId] = useState(null);   // UUID aus cities
   const [cityName, setCityName] = useState(null);
-
-  // Quickstart-Flag aus URL (?quick=1)
-  const [isQuickStart, setIsQuickStart] = useState(false);
 
   const [autoInserted, setAutoInserted] = useState(false);
 
@@ -36,9 +32,6 @@ export default function Chat() {
   // alle Conversations des Users für die Sidebar
   const [conversations, setConversations] = useState([]);
 
-  // Eingabefeld in der Sidebar für neuen Stadt-Chat
-  const [newCityInput, setNewCityInput] = useState("");
-
   const statusMsg =
     'Ihre Anfrage wird verarbeitet. Falls es sich um eine Analyse handelt, erscheint das fertige Dokument in Kürze unter "Dokumente". Bitte etwas Geduld.';
 
@@ -46,12 +39,11 @@ export default function Chat() {
     data?.reply || data?.message || data?.text || raw || "…";
 
   // -------------------------------------------
-  // Stadt + Quickstart aus URL lesen (?city=Köln&quick=1)
+  // Stadtname aus URL lesen (?city=Köln)
   // -------------------------------------------
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const c = params.get("city");
-    const q = params.get("quick");
 
     if (c) {
       setUrlCity(c);
@@ -59,8 +51,6 @@ export default function Chat() {
     } else {
       setUrlCity(null);
     }
-
-    setIsQuickStart(q === "1" || q === "true");
   }, []);
 
   // -------------------------------------------
@@ -189,10 +179,9 @@ export default function Chat() {
   }, [user, cityId, urlCity, cityName]);
 
   // -------------------------------------------
-  // Quickstart-Autotext NUR wenn ?quick=1 gesetzt ist
+  // Wenn URL-Stadt gesetzt → Auto-Start-Text ins Input-Feld
   // -------------------------------------------
   useEffect(() => {
-    if (!isQuickStart) return;
     if (!urlCity) return;
     if (autoInserted) return;
 
@@ -201,7 +190,7 @@ export default function Chat() {
     );
 
     setAutoInserted(true);
-  }, [isQuickStart, urlCity, autoInserted]);
+  }, [urlCity, autoInserted]);
 
   // -------------------------------------------
   // Nachricht senden
@@ -354,46 +343,6 @@ export default function Chat() {
     return "/chat";
   };
 
-  // -------------------------------------------
-  // Sidebar: neuen Stadt-Chat anlegen (nur Frontend)
-  // -------------------------------------------
-  const handleNewCityChat = (e) => {
-    e.preventDefault();
-    const c = newCityInput.trim();
-    if (!c) return;
-    // Navigation ohne quick=1 → kein Autotext
-    window.location.href = `/chat?city=${encodeURIComponent(c)}`;
-  };
-
-  // -------------------------------------------
-  // Sidebar: Chat löschen
-  // -------------------------------------------
-  const handleDeleteConversation = async (conv) => {
-    if (!user) return;
-    if (!window.confirm("Diesen Chat wirklich löschen?")) return;
-
-    const { error } = await deleteConversationAndMessages(conv.id, user.id);
-    if (error) {
-      console.error("deleteConversationAndMessages error", error);
-      alert("Chat konnte nicht gelöscht werden.");
-      return;
-    }
-
-    // lokalen State updaten
-    const remaining = conversations.filter((c) => c.id !== conv.id);
-    setConversations(remaining);
-
-    if (conv.id === conversationId) {
-      // aktuellen Chat gelöscht → wohin navigieren?
-      if (remaining.length > 0) {
-        const target = remaining[0];
-        window.location.href = getConversationHref(target);
-      } else {
-        window.location.href = "/chat";
-      }
-    }
-  };
-
   return (
     <AppShell title="Chat">
       <a href="/" className="cp-small cp-link">
@@ -403,69 +352,40 @@ export default function Chat() {
       <div className="mt-4 flex gap-4">
         {/* Sidebar: Conversations-Auswahl */}
         <div
-          className="w-72 rounded-2xl border p-3 cp-small flex flex-col gap-3"
+          className="w-60 rounded-2xl border p-3 cp-small"
           style={{
             borderColor: "var(--cp-line)",
             background: "var(--cp-bg)",
           }}
         >
-          <div>
-            <div className="font-semibold mb-2">Deine Chats</div>
-            {user ? (
-              conversations.length === 0 ? (
-                <div className="text-[var(--cp-muted)]">
-                  Es gibt noch keine Chats.
-                </div>
-              ) : (
-                <ul className="space-y-1 max-h-60 overflow-y-auto pr-1">
-                  {conversations.map((conv) => (
-                    <li
-                      key={conv.id}
-                      className="flex items-center justify-between gap-1"
-                    >
-                      <a
-                        href={getConversationHref(conv)}
-                        className={`flex-1 px-2 py-1 rounded-md border text-[13px] ${
-                          conv.id === conversationId
-                            ? "bg-[rgba(0,174,239,0.08)] border-[var(--cp-line)]"
-                            : "border-transparent hover:border-[var(--cp-line)]"
-                        }`}
-                      >
-                        {getConversationLabel(conv)}
-                      </a>
-                      <button
-                        type="button"
-                        className="cp-small"
-                        title="Chat löschen"
-                        onClick={() => handleDeleteConversation(conv)}
-                      >
-                        ✕
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )
-            ) : (
+          <div className="font-semibold mb-2">Deine Chats</div>
+          {user ? (
+            conversations.length === 0 ? (
               <div className="text-[var(--cp-muted)]">
-                Bitte einloggen, um deine Chats zu sehen.
+                Es gibt noch keine Chats.
               </div>
-            )}
-          </div>
-
-          {/* Neuer Stadt-Chat */}
-          {user && (
-            <form onSubmit={handleNewCityChat} className="flex gap-2 mt-2">
-              <input
-                type="text"
-                placeholder="Neue Stadt…"
-                value={newCityInput}
-                onChange={(e) => setNewCityInput(e.target.value)}
-                className="cp-input flex-1"
-              />
-              <button type="submit" className="cp-btn cp-small">
-                Neu
-              </button>
-            </form>
+            ) : (
+              <ul className="space-y-1">
+                {conversations.map((conv) => (
+                  <li key={conv.id}>
+                    <a
+                      href={getConversationHref(conv)}
+                      className={`block px-2 py-1 rounded-md border ${
+                        conv.id === conversationId
+                          ? "bg-[rgba(0,174,239,0.08)] border-[var(--cp-line)]"
+                          : "border-transparent hover:border-[var(--cp-line)]"
+                      }`}
+                    >
+                      {getConversationLabel(conv)}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : (
+            <div className="text-[var(--cp-muted)]">
+              Bitte einloggen, um deine Chats zu sehen.
+            </div>
           )}
         </div>
 
