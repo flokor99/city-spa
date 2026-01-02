@@ -9,7 +9,9 @@ export async function handler(event) {
 
   try {
     const body = JSON.parse(event.body || "{}");
-    const { message, userEmail, city, conversationId } = body;
+
+    // NEU: ownerUserId mit übernehmen
+    const { message, userEmail, ownerUserId, city, conversationId } = body;
 
     if (!message) {
       return {
@@ -23,12 +25,20 @@ export async function handler(event) {
       message,
     };
 
+    // Optional: Email weiterreichen (falls vorhanden)
     if (userEmail) {
       makePayload.userEmail = userEmail;
     }
+
+    // NEU: User-ID immer weiterreichen, wenn vorhanden
+    if (ownerUserId) {
+      makePayload.ownerUserId = ownerUserId;
+    }
+
     if (city) {
       makePayload.city = city;
     }
+
     if (conversationId) {
       makePayload.conversationId = conversationId;
     }
