@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import AppShell from "../components/AppShell.jsx";
 import { useAuth } from "../AuthContext.jsx";
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
 
 export default function Docs() {
   const { user } = useAuth();
@@ -15,51 +15,60 @@ export default function Docs() {
 
   useEffect(() => {
     async function loadDocs() {
+      if (!user) {
+        setDocs([]);
+        setSelectedDoc(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
       try {
-        // 1. Supabase URL für die documents Tabelle
-const url = `${SUPABASE_URL}/rest/v1/documents?select=*`;
+        // 1) Supabase REST: documents Tabelle
+        // select=* reicht. Wichtig ist nur, dass owner_user_id in den rows enthalten ist.
+        const url = `${SUPABASE_URL}/rest/v1/documents?select=*`;
 
-// 2. Request an Supabase senden
-const res = await fetch(url, {
-  headers: {
-    apikey: SUPABASE_ANON_KEY,
-    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-  },
-});
+        // 2) Request an Supabase senden
+        const res = await fetch(url, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+        });
 
-if (!res.ok) {
-  throw new Error(`HTTP ${res.status}`);
-}
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
 
-const rows = await res.json();
+        const rows = await res.json();
 
-// 3. Rows in das bisherige Format umwandeln,
-//    damit der Rest der Komponente NICHT geändert werden muss
-const list = Array.isArray(rows)
-  ? rows.map((row) => ({
-      path: row.pdf_path,          // so wie früher doc.path
-      title: row.title,
-      city_slug: row.city,         // ersetzt dein city_slug Feld
-      created_at: row.created_at?.slice(0, 10), // Datum etwas gekürzt
-      owner_email: row.owner_email,
-    }))
-  : [];
+        // 3) Rows in das bisherige Format umwandeln
+        const list = Array.isArray(rows)
+          ? rows.map((row) => ({
+              path: row.pdf_path,
+              title: row.title,
+              city_slug: row.city,
+              created_at: row.created_at?.slice(0, 10),
+              owner_email: row.owner_email,
+              owner_user_id: row.owner_user_id, // NEU
+            }))
+          : [];
 
-// 4. Benutzerbezogene Filterung wie vorher
-const myDocs = list.filter(
-  (doc) =>
-    doc.owner_email &&
-    user?.email &&
-    doc.owner_email.toLowerCase() === user.email.toLowerCase()
-);
+        // 4) Benutzerbezogene Filterung
+        // Primär: owner_user_id. Fallback: owner_email (für alte Docs ohne Migration)
+        const myDocs = list.filter((doc) => {
+          if (doc.owner_user_id && user?.id) return doc.owner_user_id === user.id;
 
-setDocs(myDocs);
-if (myDocs.length > 0) {
-  setSelectedDoc(myDocs[0]);
-} else {
-  setSelectedDoc(null);
-}
+          if (doc.owner_email && user?.email)
+            return doc.owner_email.toLowerCase() === user.email.toLowerCase();
 
+          return false;
+        });
+
+        setDocs(myDocs);
+        setSelectedDoc(myDocs.length > 0 ? myDocs[0] : null);
       } catch (err) {
         console.error("Fehler beim Laden der Dokumente", err);
         setError("Dokumentenliste konnte nicht geladen werden.");
@@ -136,10 +145,7 @@ if (myDocs.length > 0) {
                       <div className="cp-body">
                         {doc.title || "Unbenanntes Dokument"}
                       </div>
-                      <div
-                        className="cp-small"
-                        style={{ color: "var(--cp-muted)" }}
-                      >
+                      <div className="cp-small" style={{ color: "var(--cp-muted)" }}>
                         {doc.city_slug || ""}
                         {doc.created_at ? ` · ${doc.created_at}` : ""}
                       </div>
@@ -159,9 +165,7 @@ if (myDocs.length > 0) {
               className="px-4 py-3 flex items-center justify-between border-b"
               style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
             >
-              <div className="cp-heading">
-                {selectedDoc.title || selectedDoc.path}
-              </div>
+              <div className="cp-heading">{selectedDoc.title || selectedDoc.path}</div>
               <a
                 href={`/${selectedDoc.path}`}
                 target="_blank"
