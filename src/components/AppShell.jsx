@@ -1,4 +1,23 @@
+// AppShell.jsx
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../authActions.js";
+
 export default function AppShell({ title, children }) {
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div
       style={{
@@ -39,41 +58,68 @@ export default function AppShell({ title, children }) {
           />
 
           {/* Rechte Seite – Titel + Skyline im selben Container */}
-        <div
-  style={{
-    position: "relative",
-    fontSize: 14,
-    fontWeight: 600,
-    color: "rgba(255,255,255,0.85)",
-    letterSpacing: ".2px",
-    textAlign: "right",
-    paddingRight: "70px",   // Platz für Skyline + kleinen Abstand
-    flexShrink: 0,
-  }}
->
-  <span
-    style={{
-      position: "relative",
-      zIndex: 2,
-    }}
-  >
-    {title || "City Profiler"}
-  </span>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              flexShrink: 0,
+            }}
+          >
+            {/* Titel + Skyline */}
+            <div
+              style={{
+                position: "relative",
+                fontSize: 14,
+                fontWeight: 600,
+                color: "rgba(255,255,255,0.85)",
+                letterSpacing: ".2px",
+                textAlign: "right",
+                paddingRight: "70px", // Platz für Skyline + kleinen Abstand
+                flexShrink: 0,
+              }}
+            >
+              <span style={{ position: "relative", zIndex: 2 }}>
+                {title || "City Profiler"}
+              </span>
 
-  <img
-    src="/assets/skyline.png"
-    alt=""
-    aria-hidden="true"
-    style={{
-      position: "absolute",
-      right: "215px",   // Skyline endet leicht links vom Text "Dokumente"
-      bottom: "-24px",  // untere Kante genau am orangenen Strich
-      height: "58px",
-      opacity: 0.9,
-      zIndex: 1,
-    }}
-  />
-</div>
+              <img
+                src="/assets/skyline.png"
+                alt=""
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  right: "215px", // Skyline endet leicht links vom Text "Dokumente"
+                  bottom: "-24px", // untere Kante genau am orangenen Strich
+                  height: "58px",
+                  opacity: 0.9,
+                  zIndex: 1,
+                }}
+              />
+            </div>
+
+            {/* Logout */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(255,255,255,0.35)",
+                color: "rgba(255,255,255,0.9)",
+                padding: "8px 10px",
+                borderRadius: 10,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: loggingOut ? "not-allowed" : "pointer",
+                opacity: loggingOut ? 0.7 : 1,
+              }}
+              aria-label="Logout"
+              title="Logout"
+            >
+              {loggingOut ? "Logout…" : "Logout"}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -103,8 +149,7 @@ export default function AppShell({ title, children }) {
             fontSize: 12,
             color: "var(--cp-muted)",
           }}
-        >
-        </div>
+        ></div>
       </footer>
     </div>
   );
