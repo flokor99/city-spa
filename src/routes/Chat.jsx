@@ -237,11 +237,13 @@ export default function Chat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: text,
-          city: urlCity || null,
-          cityId: cityId || null,
-          conversationId,
-        }),
+  message: text,
+  city: urlCity || null,
+  cityId: cityId || null,
+  conversationId,
+  ownerUserId: user.id,
+}),
+
         signal: controller.signal,
       });
 
