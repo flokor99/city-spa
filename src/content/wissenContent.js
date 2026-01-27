@@ -11,7 +11,7 @@ export const presentations = [
     title: "City Profiler – Überblick",
     description: "Foresight Academy - Future Cities Präsentation",
     fileUrl: "/docs/presentations/Cities_of_the_Future_Scenario_Documentation_Draft20250228.pdf",
-    previewUrl: "/assets/preview_intro.png",
+    previewUrl: "public/assets/previews/Future Cities Titelbild.png",
   },
 ];
 
