@@ -38,14 +38,15 @@ export const presentations = [
 
 export const faqItems = [
   {
-    q: "Ist das Tool eine verlässliche Entscheidungsgrundlage?",
-    a: "Nein. Es ist ein Analyse- und Denkwerkzeug. Ergebnisse müssen eingeordnet und geprüft werden.",
+    q: "Ich habe eine Frage im Chat gestellt, bekomme aber nur die Meldung, dass ein Output erstellt wird. Warum?",
+    a: "Diese Version des City Profilers ist ein Prototyp. Antworten, die länger als ca. 30 Sekunden für die Generierung benötigen, können aktuell abbrechen. In diesem Fall wird der Prozess nicht sauber abgeschlossen und es erscheint lediglich die Meldung, dass ein Output erstellt wird. Stelle die Frage in diesem Fall kürzer oder versuche es erneut.",
   },
   {
-    q: "Kann ich Zahlen und Zitate direkt übernehmen?",
-    a: "Nein. Kritische Fakten immer prüfen und Quellen gegenlesen.",
+    q: "Wo finde ich die Quellen und vertiefenden Informationen zu meinem Output?",
+    a: "Quellenangaben sowie die vom Profiler zusammengetragenen Hintergrundinformationen sind im Anhang (Annex) des jeweiligen Outputs dokumentiert.",
   },
 ];
+
 
 export const annexItems = [
   {
