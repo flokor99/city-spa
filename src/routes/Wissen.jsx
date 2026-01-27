@@ -1,61 +1,88 @@
-// src/routes/Wissen.jsx
-import AppShell from "../components/AppShell.jsx";
+import {
+  toolLimits,
+  presentations,
+  faqItems,
+  annexItems,
+} from "../content/wissenContent";
 
 export default function Wissen() {
-  const sections = [
-    {
-      title: "Was sind die Szenarien?",
-      text:
-        "Die vier Szenarien beschreiben mögliche Entwicklungsrichtungen deutscher Städte bis 2035 – von digital-partizipativ bis unternehmensdominiert. Sie dienen der Einordnung, zeigen Optionen und machen Zielbilder vergleichbar."
-    },
-    {
-      title: "Methodik",
-      text:
-        "Die Ableitung kombiniert Desk Research, Expert*innen-Workshops und eine quantitative Bewertung relevanter Indikatoren. Ziel ist keine exakte Prognose, sondern robuste Orientierung und Vergleichbarkeit."
-    },
-    {
-      title: "Kriterien",
-      text:
-        "Bewertet werden u. a. Bürgerbeteiligung, Bürgerzentrierung, Mobilität, KI-Einsatz, Transparenz, Nachhaltigkeit sowie soziale Gleichheit. Je Szenario sind Gewichtungen und Ausprägungen unterschiedlich."
-    }
-  ];
-
   return (
-    <AppShell title="Wissen">
-      {/* Zurück */}
-      <a href="/" className="cp-small cp-link">← Zurück</a>
+    <div className="p-6 space-y-10">
+      {/* Hinweisblock. Grenzen */}
+      <div className="rounded-xl border border-amber-300 bg-amber-50 p-4">
+        <div className="font-medium text-amber-900">Grenzen des Tools</div>
+        <ul className="mt-2 list-disc pl-5 text-sm text-amber-900 space-y-1">
+          {toolLimits.map((x, idx) => (
+            <li key={idx}>{x}</li>
+          ))}
+        </ul>
+      </div>
 
-      {/* Intro */}
-      <section className="mt-4 mb-5x">
-        <h1 className="cp-h1 mb-2x">Wissen</h1>
-        <p className="cp-body">
-          Kurze, verlässliche Erläuterungen zu Szenarien, Kriterien und Methodik –
-          im Stil des City-Profiler-Reports.
-        </p>
+      {/* Präsentationen */}
+      <section>
+        <h1 className="text-xl font-semibold">Präsentationen</h1>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {presentations.map((p) => (
+            <a
+              key={p.id}
+              href={p.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl border bg-white hover:shadow-sm transition overflow-hidden"
+            >
+              {p.previewUrl ? (
+                <img
+                  src={p.previewUrl}
+                  alt=""
+                  className="w-full h-40 object-cover"
+                />
+              ) : (
+                <div className="w-full h-40 bg-slate-100" />
+              )}
+
+              <div className="p-4 space-y-1">
+                <div className="font-medium">{p.title}</div>
+                <div className="text-sm text-slate-600">{p.description}</div>
+              </div>
+            </a>
+          ))}
+        </div>
       </section>
 
-      {/* Artikelabschnitte */}
-      <section className="space-y-4">
-        {sections.map((s, i) => (
-          <article
-            key={i}
-            className="rounded-2xl border p-6"
-            style={{ borderColor: "var(--cp-line)", background: "var(--cp-bg)" }}
-          >
-            <h2 className="cp-h2 mb-2x">{s.title}</h2>
-            <p className="cp-body">{s.text}</p>
-          </article>
-        ))}
+      {/* FAQ */}
+      <section>
+        <h2 className="text-xl font-semibold">FAQ</h2>
+
+        <div className="mt-4 space-y-3">
+          {faqItems.map((item, idx) => (
+            <details key={idx} className="rounded-xl border bg-white p-4">
+              <summary className="cursor-pointer font-medium">{item.q}</summary>
+              <div className="mt-2 text-sm text-slate-700">{item.a}</div>
+            </details>
+          ))}
+        </div>
       </section>
 
-      {/* Quellenbox */}
-      <section
-        className="mt-6x rounded-xl border px-4 py-3 cp-small"
-        style={{ borderColor: "var(--cp-line)", background: "#F7F8FA" }}
-      >
-        <strong style={{ color: "var(--cp-primary)" }}>Quelle:</strong>{" "}
-        City Profiler Report 2025 · Ströer Corporate Strategy & Innovation
+      {/* Anhang */}
+      <section>
+        <h2 className="text-xl font-semibold">Anhang</h2>
+
+        <div className="mt-4 space-y-3">
+          {annexItems.map((a) => (
+            <a
+              key={a.id}
+              href={a.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="block rounded-xl border bg-white hover:shadow-sm transition p-4"
+            >
+              <div className="font-medium">{a.title}</div>
+              <div className="text-sm text-slate-600">{a.description}</div>
+            </a>
+          ))}
+        </div>
       </section>
-    </AppShell>
+    </div>
   );
 }
