@@ -60,6 +60,6 @@ export const annexItems = [
     id: "criteria-xlsx",
     title: "Anhang – Kriterien & Bewertungslogik (Excel)",
     description: "Tabellarische Detailübersicht der Kriterien zur Stadteinordnung.",
-    fileUrl: "/docs/annex/city-profiler_kriterien.xlsx",
+    fileUrl: "/docs/annex/Kriterien für Smart City.xlsx",
   },
 ];
