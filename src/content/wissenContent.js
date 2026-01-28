@@ -49,16 +49,17 @@ export const faqItems = [
 
 
 export const annexItems = [
-  {
-    id: "methodik",
-    title: "Anhang – Methodikdetails",
-    description: "Definitionen, Scoring-Logik, Annahmen.",
-    fileUrl: "/docs/annex/methodik.pdf",
-  },
+
   {
     id: "glossar",
     title: "Anhang – Glossar",
     description: "Begriffe und Abkürzungen.",
     fileUrl: "/docs/annex/glossar.pdf",
+  },
+  {
+    id: "criteria-xlsx",
+    title: "Anhang – Kriterien & Bewertungslogik (Excel)",
+    description: "Tabellarische Detailübersicht der Kriterien zur Stadteinordnung.",
+    fileUrl: "/docs/annex/city-profiler_kriterien.xlsx",
   },
 ];
