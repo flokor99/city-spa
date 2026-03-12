@@ -2,19 +2,12 @@ exports.handler = async (event) => {
   try {
     const { getStore } = await import("@netlify/blobs");
 
-    const siteID = process.env.MY_SITE_ID;
-    const token = process.env.NETLIFY_API_TOKEN;
-
-    if (!siteID || !token) {
-      return { statusCode: 500, body: "Missing env" };
-    }
-
     const id = new URL(event.rawUrl).searchParams.get("id");
     if (!id) {
       return { statusCode: 400, body: "Missing id" };
     }
 
-    const store = await getStore({ name: "annex", siteID, token });
+    const store = await getStore({ name: "annex" });
 
     const rawMeta = await store.get(`meta/${id}.json`);
     if (!rawMeta) return { statusCode: 404, body: "Not found" };
