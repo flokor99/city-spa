@@ -1,19 +1,16 @@
-const STORE_NAME = "annex";
+const STORE_PREFIX = "annex";
 
 exports.handler = async (event) => {
   try {
-    const { getStore } = await import("@netlify/blobs");
-
-  const store = await getStore({
-  name: STORE_NAME,
-  siteID: process.env.MY_SITE_ID,
-  token: process.env.NETLIFY_API_TOKEN,
-});
+    const { get, set } = await import("@netlify/kv");
 
     if (event.httpMethod === "POST") {
       const webhookToken = process.env.ANNEX_WEBHOOK_TOKEN;
+
       if (webhookToken) {
-        const provided = event.headers["x-annex-token"] || event.headers["X-Annex-Token"];
+        const provided =
+          event.headers["x-annex-token"] || event.headers["X-Annex-Token"];
+
         if (provided !== webhookToken) {
           return json(401, { error: "Unauthorized" });
         }
@@ -56,7 +53,8 @@ exports.handler = async (event) => {
       const meta = {
         id,
         title: title || `Annex zu ${documentTitle || documentPath}`,
-        description: description || "Quellen und tiefergehende Hintergrundanalyse",
+        description:
+          description || "Quellen und tiefergehende Hintergrundanalyse",
         document_path: documentPath,
         document_title: documentTitle || null,
         owner_user_id: ownerUserId,
@@ -65,25 +63,22 @@ exports.handler = async (event) => {
         created_at: createdAt,
       };
 
-      await store.set(`meta/${id}.json`, JSON.stringify(meta), {
-        contentType: "application/json",
-      });
+      await set(`${STORE_PREFIX}:meta:${id}`, JSON.stringify(meta));
+      await set(`${STORE_PREFIX}:file:${id}`, md);
 
-      await store.set(`files/${id}.md`, md, {
-        contentType: "text/markdown; charset=utf-8",
-      });
+      const rawIndex = (await get(`${STORE_PREFIX}:index`)) || "[]";
+      const index = JSON.parse(rawIndex);
 
-      const index = await readIndex(store);
-      const next = [id, ...index.ids.filter((x) => x !== id)];
+      const next = [id, ...index.filter((x) => x !== id)];
 
-      await store.set("index.json", JSON.stringify({ ids: next }), {
-        contentType: "application/json",
-      });
+      await set(`${STORE_PREFIX}:index`, JSON.stringify(next));
 
       return json(200, { ok: true, annexId: id, ...meta });
     }
 
     if (event.httpMethod === "GET") {
+      const { get } = await import("@netlify/kv");
+
       const q = event.queryStringParameters || {};
 
       const ownerUserId = q.ownerUserId || null;
@@ -91,38 +86,38 @@ exports.handler = async (event) => {
       const documentPath = q.documentPath || null;
       const includeContent = q.includeContent === "1";
 
-      const index = await readIndex(store);
-      const td = new TextDecoder();
+      const rawIndex = (await get(`${STORE_PREFIX}:index`)) || "[]";
+      const ids = JSON.parse(rawIndex);
 
       const items = [];
 
-      for (const id of index.ids) {
-        const rawMeta = await store.get(`meta/${id}.json`);
+      for (const id of ids) {
+        const rawMeta = await get(`${STORE_PREFIX}:meta:${id}`);
         if (!rawMeta) continue;
 
-        const metaText = typeof rawMeta === "string" ? rawMeta : td.decode(rawMeta);
-        const meta = JSON.parse(metaText);
+        const meta = JSON.parse(rawMeta);
 
         if (ownerUserId && meta.owner_user_id !== ownerUserId) continue;
 
         if (!ownerUserId && ownerEmail && meta.owner_email) {
-          if (String(meta.owner_email).toLowerCase() !== String(ownerEmail).toLowerCase()) continue;
+          if (
+            String(meta.owner_email).toLowerCase() !==
+            String(ownerEmail).toLowerCase()
+          )
+            continue;
         }
 
         if (documentPath && meta.document_path !== documentPath) continue;
 
         const item = {
           ...meta,
-          file_url: `/.netlify/functions/annex-file?id=${encodeURIComponent(id)}`,
+          file_url: `/.netlify/functions/annex-file?id=${encodeURIComponent(
+            id
+          )}`,
         };
 
         if (includeContent) {
-          const rawContent = await store.get(`files/${id}.md`);
-          item.markdown = rawContent
-            ? typeof rawContent === "string"
-              ? rawContent
-              : td.decode(rawContent)
-            : "";
+          item.markdown = (await get(`${STORE_PREFIX}:file:${id}`)) || "";
         }
 
         items.push(item);
@@ -138,23 +133,15 @@ exports.handler = async (event) => {
   }
 };
 
-async function readIndex(store) {
-  const td = new TextDecoder();
-  const raw = await store.get("index.json");
-
-  if (!raw) return { ids: [] };
-
-  const text = typeof raw === "string" ? raw : td.decode(raw);
-
-  try {
-    const parsed = JSON.parse(text);
-    return { ids: Array.isArray(parsed.ids) ? parsed.ids : [] };
-  } catch {
-    return { ids: [] };
-  }
-}
-
-function buildMarkdown({ title, description, markdown, sources, background, documentTitle, city }) {
+function buildMarkdown({
+  title,
+  description,
+  markdown,
+  sources,
+  background,
+  documentTitle,
+  city,
+}) {
   if (markdown && typeof markdown === "string") return markdown;
 
   const lines = [];
@@ -167,7 +154,11 @@ function buildMarkdown({ title, description, markdown, sources, background, docu
 
   if (background) {
     lines.push("\n## Tiefergehende Analyse");
-    lines.push(typeof background === "string" ? background : JSON.stringify(background, null, 2));
+    lines.push(
+      typeof background === "string"
+        ? background
+        : JSON.stringify(background, null, 2)
+    );
   }
 
   if (Array.isArray(sources) && sources.length > 0) {
@@ -177,16 +168,13 @@ function buildMarkdown({ title, description, markdown, sources, background, docu
       if (typeof source === "string") {
         lines.push(`${index + 1}. ${source}`);
       } else if (source && typeof source === "object") {
-        const label = source.title || source.name || source.url || `Quelle ${index + 1}`;
+        const label =
+          source.title || source.name || source.url || `Quelle ${index + 1}`;
         const url = source.url ? ` (${source.url})` : "";
 
         lines.push(`${index + 1}. ${label}${url}`);
       }
     });
-  }
-
-  if (!background && (!Array.isArray(sources) || sources.length === 0)) {
-    lines.push("\n*Keine zusätzlichen Quelleninformationen übermittelt.*");
   }
 
   return lines.join("\n");
