@@ -4,14 +4,7 @@ exports.handler = async (event) => {
   try {
     const { getStore } = await import("@netlify/blobs");
 
-    const siteID = process.env.MY_SITE_ID;
-    const token = process.env.NETLIFY_API_TOKEN;
-
-    if (!siteID || !token) {
-      return json(500, { error: "Missing MY_SITE_ID or NETLIFY_API_TOKEN" });
-    }
-
-    const store = await getStore({ name: STORE_NAME, siteID, token });
+    const store = await getStore({ name: STORE_NAME });
 
     if (event.httpMethod === "POST") {
       const webhookToken = process.env.ANNEX_WEBHOOK_TOKEN;
@@ -23,6 +16,7 @@ exports.handler = async (event) => {
       }
 
       const body = JSON.parse(event.body || "{}");
+
       const {
         title,
         description,
@@ -44,7 +38,16 @@ exports.handler = async (event) => {
 
       const id = cryptoId();
       const createdAt = new Date().toISOString();
-      const md = buildMarkdown({ title, description, markdown, sources, background, documentTitle, city });
+
+      const md = buildMarkdown({
+        title,
+        description,
+        markdown,
+        sources,
+        background,
+        documentTitle,
+        city,
+      });
 
       const meta = {
         id,
@@ -61,10 +64,14 @@ exports.handler = async (event) => {
       await store.set(`meta/${id}.json`, JSON.stringify(meta), {
         contentType: "application/json",
       });
-      await store.set(`files/${id}.md`, md, { contentType: "text/markdown; charset=utf-8" });
+
+      await store.set(`files/${id}.md`, md, {
+        contentType: "text/markdown; charset=utf-8",
+      });
 
       const index = await readIndex(store);
       const next = [id, ...index.ids.filter((x) => x !== id)];
+
       await store.set("index.json", JSON.stringify({ ids: next }), {
         contentType: "application/json",
       });
@@ -74,6 +81,7 @@ exports.handler = async (event) => {
 
     if (event.httpMethod === "GET") {
       const q = event.queryStringParameters || {};
+
       const ownerUserId = q.ownerUserId || null;
       const ownerEmail = q.ownerEmail || null;
       const documentPath = q.documentPath || null;
@@ -129,8 +137,11 @@ exports.handler = async (event) => {
 async function readIndex(store) {
   const td = new TextDecoder();
   const raw = await store.get("index.json");
+
   if (!raw) return { ids: [] };
+
   const text = typeof raw === "string" ? raw : td.decode(raw);
+
   try {
     const parsed = JSON.parse(text);
     return { ids: Array.isArray(parsed.ids) ? parsed.ids : [] };
@@ -143,6 +154,7 @@ function buildMarkdown({ title, description, markdown, sources, background, docu
   if (markdown && typeof markdown === "string") return markdown;
 
   const lines = [];
+
   lines.push(`# ${title || `Annex zu ${documentTitle || "Dokument"}`}`);
 
   if (description) lines.push(`\n${description}`);
@@ -156,12 +168,14 @@ function buildMarkdown({ title, description, markdown, sources, background, docu
 
   if (Array.isArray(sources) && sources.length > 0) {
     lines.push("\n## Quellen");
+
     sources.forEach((source, index) => {
       if (typeof source === "string") {
         lines.push(`${index + 1}. ${source}`);
       } else if (source && typeof source === "object") {
         const label = source.title || source.name || source.url || `Quelle ${index + 1}`;
         const url = source.url ? ` (${source.url})` : "";
+
         lines.push(`${index + 1}. ${label}${url}`);
       }
     });
@@ -184,7 +198,14 @@ function json(statusCode, body) {
 
 function cryptoId() {
   const b = new Uint8Array(16);
-  if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(b);
-  else for (let i = 0; i < 16; i += 1) b[i] = (Math.random() * 256) | 0;
+
+  if (globalThis.crypto?.getRandomValues) {
+    crypto.getRandomValues(b);
+  } else {
+    for (let i = 0; i < 16; i++) {
+      b[i] = (Math.random() * 256) | 0;
+    }
+  }
+
   return [...b].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
