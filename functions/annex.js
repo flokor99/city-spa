@@ -4,7 +4,11 @@ exports.handler = async (event) => {
   try {
     const { getStore } = await import("@netlify/blobs");
 
-    const store = await getStore({ name: STORE_NAME });
+  const store = await getStore({
+  name: STORE_NAME,
+  siteID: process.env.MY_SITE_ID,
+  token: process.env.NETLIFY_API_TOKEN,
+});
 
     if (event.httpMethod === "POST") {
       const webhookToken = process.env.ANNEX_WEBHOOK_TOKEN;
