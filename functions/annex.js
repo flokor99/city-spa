@@ -3,26 +3,29 @@ exports.handler = async (event) => {
 
     const body = JSON.parse(event.body || "{}")
 
-    const { document_id, markdown } = body
+    const { document_path, title, markdown } = body
 
-    if (!document_id || !markdown) {
+    if (!document_path || !markdown) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "document_id and markdown required" })
+        body: JSON.stringify({ error: "document_path and markdown required" })
       }
     }
 
     const response = await fetch(
-      "https://rnkxcsjqldelxsnsfawr.supabase.co/rest/v1/documents?id=eq." + document_id,
+      "https://rnkxcsjqldelxsnsfawr.supabase.co/rest/v1/annex",
       {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": process.env.SUPABASE_SERVICE_ROLE_KEY,
-          "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_ROLE_KEY
+          "Authorization": "Bearer " + process.env.SUPABASE_SERVICE_ROLE_KEY,
+          "Prefer": "return=representation"
         },
         body: JSON.stringify({
-          annex_markdown: markdown
+          document_path,
+          title,
+          markdown
         })
       }
     )
